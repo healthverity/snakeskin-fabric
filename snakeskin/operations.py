@@ -24,10 +24,7 @@ from .models import (
 
 from .events import OrdererEvents
 
-from .errors import (
-    handle_conn_errors,
-    TrasactionCommitError
-)
+from .errors import TrasactionCommitError
 
 from .constants import (
     ChaincodeProposalType,
@@ -55,7 +52,6 @@ from .connect import (
 )
 
 
-@handle_conn_errors
 async def create_channel(requestor: User, orderer: Orderer, channel: Channel,
                          tx_file_path: str):
     """ A high-level operation that creates a channel from a transaction file
@@ -95,7 +91,6 @@ async def create_channel(requestor: User, orderer: Orderer, channel: Channel,
         )
 
 
-@handle_conn_errors
 async def join_channel(requestor: User,
                        orderer: Orderer,
                        channel: Channel,

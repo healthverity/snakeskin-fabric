@@ -98,7 +98,7 @@ def build_header(tx_context: TXContext,
 
     signature_header = SignatureHeader(
         creator=tx_context.identity.SerializeToString(),
-        nonce=encode_proto_bytes(tx_context.nonce)
+        nonce=tx_context.nonce
     )
 
     header = Header(
@@ -207,7 +207,7 @@ def build_endorsed_tx_envelope(endorsed_tx: EndorsedTX,
 
 def tx_context_from_user(user: User) -> TXContext:
     """ Creates a TXContext object from a User """
-    nonce = user.cryptoSuite.generate_nonce(24)
+    nonce = user.crypto_suite.generate_nonce(24)
     identity = SerializedIdentity(
         mspid=user.msp_id,
         id_bytes=user.cert
@@ -216,7 +216,7 @@ def tx_context_from_user(user: User) -> TXContext:
     return TXContext(
         identity=identity,
         nonce=nonce,
-        tx_id=user.cryptoSuite.hash(nonce + identity).hexdigest()
+        tx_id=user.crypto_suite.hash(nonce + identity.SerializeToString()).hexdigest()
     )
 
 
@@ -242,13 +242,13 @@ def wrap_transaction(user: User,
     """ Wraps a transaction payload in an envelope """
     payload_bytes = payload.SerializeToString()
     return Envelope(
-        signature=encode_proto_bytes(sign(user, payload_bytes)),
+        signature=sign(user, payload_bytes),
         payload=payload_bytes
     )
 
-def sign(user: User, payload: bytes) -> str:
+def sign(user: User, payload: bytes) -> bytes:
     """ Signs a payload using the user's private key """
-    return user.cryptoSuite.sign(user.private_key, payload)
+    return user.crypto_suite.sign(user.private_key, payload)
 
 
 def build_endorsement_policy(policy: EndorsementPolicy,
@@ -320,12 +320,12 @@ def build_config_update_envelope(channel: Channel,
 
     header = SignatureHeader(
         creator=tx_context.identity.SerializeToString(),
-        nonce=encode_proto_bytes(tx_context.nonce)
+        nonce=tx_context.nonce
     )
     header_bytes = header.SerializeToString()
     signature = ConfigSignature(
         signature_header=header_bytes,
-        signature=encode_proto_bytes(sign(requestor, header_bytes + config_update))
+        signature=sign(requestor, header_bytes + config_update)
     )
 
     # Generate envelope
@@ -378,17 +378,12 @@ def build_cc_deployment_spec(name: str,
     cc_spec = ChaincodeSpecProto(
         chaincode_id=cc_id,
         type=ChaincodeSpecProto.Type.Value(language.value),
+        input=ChaincodeInput(
+            args=input_args
+        ) if input_args else None
     )
 
     cc_deploy_spec = ChaincodeDeploymentSpec(chaincode_spec=cc_spec)
-
-    if input_args:
-        cc_spec.input.CopyFrom(
-            ChaincodeInput(
-                args=input_args
-            )
-        )
-
 
     if code_package:
         cc_deploy_spec.code_package = code_package
@@ -462,7 +457,7 @@ def build_generated_tx(requestor: User,
     transient_proposal_bytes = transient_proposal.SerializeToString()
 
     signed_proposal = SignedProposal(
-        signature=encode_proto_bytes(sign(requestor, transient_proposal_bytes)),
+        signature=sign(requestor, transient_proposal_bytes),
         proposal_bytes=transient_proposal_bytes
     )
 

@@ -3,7 +3,7 @@
 """
 
 import sys
-from functools import wraps
+from contextlib import contextmanager
 
 import grpc # type: ignore
 
@@ -116,20 +116,17 @@ class TransactionValidationError(BlockchainError):
 
 
 
-def handle_conn_errors(func):
+@contextmanager
+def handle_conn_errors():
     """ A decorator function for catching all gRPC errors and re-raising them
         to blockchain connection errors
     """
 
-    @wraps(func)
-    async def _wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except grpc.RpcError as rpc_error_call:
-            traceback = sys.exc_info()[2]
-            conn_error = BlockchainConnectionError(rpc_error_call)
-            raise BlockchainConnectionError.with_traceback(
-                conn_error, traceback
-            )
-
-    return _wrapper
+    try:
+        yield
+    except grpc.RpcError as rpc_error_call:
+        traceback = sys.exc_info()[2]
+        conn_error = BlockchainConnectionError(rpc_error_call)
+        raise BlockchainConnectionError.with_traceback(
+            conn_error, traceback
+        )

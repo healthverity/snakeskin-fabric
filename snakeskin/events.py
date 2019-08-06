@@ -45,12 +45,11 @@ class _EventHub(Generic[BlockType, TXType]):
                              ) -> TXType:
         """ Gets a transaction by it's ID from the event stream. Note that """
         async for block in self.stream_blocks(start=start, behavior=behavior):
-            for transaction in block.trasactions:
+            for transaction in block.transactions:
                 if transaction.tx_id == tx_id:
                     return transaction
         raise RuntimeError('Could not get transaction')
 
-    @handle_conn_errors
     async def stream_blocks(self,
                             start: int = None,
                             stop: int = INDEFINITE_STOP_POSITION,
@@ -65,13 +64,14 @@ class _EventHub(Generic[BlockType, TXType]):
 
         stream = self._build_stream(build_envelope_stream(envelope))
 
-        async for resp in await stream:
-            if resp.status:
-                raise BlockRetrievalError(
-                    'Failed to retrieve block',
-                    status=resp.status,
-                )
-            yield resp.block
+        with handle_conn_errors():
+            async for resp in stream:
+                if resp.status:
+                    raise BlockRetrievalError(
+                        'Failed to retrieve block',
+                        status=resp.status,
+                    )
+                yield self._pull_block_from_response(resp)
 
     def _get_connection_envelope(self,
                                  behavior: SeekBehavior = SeekBehavior.BlockUntilReady,
@@ -93,34 +93,14 @@ class _EventHub(Generic[BlockType, TXType]):
 
         )
 
-    @handle_conn_errors
     def _build_stream(self, envelope: Envelope):
+        raise NotImplementedError
+
+    def _pull_block_from_response(self, resp):
         raise NotImplementedError
 
     @property
     def _client_cert(self):
-        raise NotImplementedError
-
-
-class _PeerEventHub(_EventHub[BlockType, TXType]):
-    """ A generic event hub for peer events """
-
-    def __init__(self,
-                 requestor: User,
-                 channel: Channel,
-                 peer: Peer):
-        self.peer = peer
-        super().__init__(
-            requestor=requestor,
-            channel=channel,
-        )
-
-    @property
-    def _client_cert(self):
-        return self.peer.client_cert
-
-    @handle_conn_errors
-    def _build_stream(self, envelope: Envelope):
         raise NotImplementedError
 
 
@@ -141,10 +121,11 @@ class PeerEvents(_EventHub[RawBlock, DecodedTX]):
     def _client_cert(self):
         return self.peer.client_cert
 
-    @handle_conn_errors
     def _build_stream(self, envelope):
         return self.peer.deliver.Deliver(envelope)
 
+    def _pull_block_from_response(self, resp):
+        return RawBlock.from_proto(resp.block)
 
 
 class PeerFilteredEvents(_EventHub[FilteredBlock, FilteredTX]):
@@ -184,6 +165,8 @@ class PeerFilteredEvents(_EventHub[FilteredBlock, FilteredTX]):
     def _build_stream(self, envelope):
         return self.peer.deliver.DeliverFiltered(envelope)
 
+    def _pull_block_from_response(self, resp):
+        return FilteredBlock.from_proto(resp.filtered_block)
 
 
 class OrdererEvents(_EventHub[RawBlock, DecodedTX]):
@@ -205,3 +188,6 @@ class OrdererEvents(_EventHub[RawBlock, DecodedTX]):
     @property
     def _client_cert(self):
         return self.orderer.client_cert
+
+    def _pull_block_from_response(self, resp):
+        return RawBlock.from_proto(resp.block)

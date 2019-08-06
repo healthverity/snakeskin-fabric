@@ -67,7 +67,7 @@ class DecodedBlock:
         )
 
     @property
-    def transactions(self) -> List[DecodedTX]:
+    def transactions(self) -> List['DecodedTX']:
         """ A list of transactions in this block """
         return self.data.data
 

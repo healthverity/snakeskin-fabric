@@ -32,7 +32,7 @@ class PolicyRole(Enum):
 
 class ChaincodeProposalType(Enum):
     """ Chaincode Proposal Type """
-    Install: str = 'install'
+    Install = 'install'
     Instantiate = 'deploy'
     Invoke = 'invoke'
     Upgrade = 'upgrade'

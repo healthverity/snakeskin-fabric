@@ -25,7 +25,7 @@ from ._decoded import DecodedTX # pylint: disable=unused-import
 class TXContext:
     """ Contextual information about a Hyperledger Fabric transaction """
     identity: SerializedIdentity
-    nonce: str
+    nonce: bytes
     tx_id: str
     epoch: int = 0
 

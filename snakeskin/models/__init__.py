@@ -3,9 +3,11 @@
 """
 from datetime import datetime
 from dataclasses import dataclass, field
-from typing import List, Mapping, Union, Optional
+from typing import List, Mapping, Union, Optional, Any
 
 import aiogrpc # type: ignore
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.hazmat.backends import default_backend
 
 from ..protos.orderer.ab_pb2_grpc import AtomicBroadcastStub
 from ..protos.common.common_pb2 import (
@@ -36,6 +38,8 @@ from ..protos.discovery.protocol_pb2_grpc import DiscoveryStub
 from ..constants import ChaincodeLanguage, PolicyExpression
 from ..crypto import CryptoSuite
 
+_CRYPTO_BACKEND = default_backend()
+
 @dataclass()
 class User:
     """ A model to represent a Hyperledger Fabric User """
@@ -43,10 +47,11 @@ class User:
     name: str
     msp_id: str
     cert_path: Optional[str] = None
-    private_key_path: Optional[str] = None
+    key_path: Optional[str] = None
     cert: Optional[bytes] = None
-    private_key: Optional[bytes] = None
-    cryptoSuite = field(default_factory=CryptoSuite.default)
+    key: Optional[bytes] = None
+    crypto_suite: Any = field(default=CryptoSuite.default)
+    private_key: Any = None
 
     def __post_init__(self):
 
@@ -56,13 +61,17 @@ class User:
             with open(self.cert_path, 'rb') as inf:
                 self.cert = inf.read()
 
-        if not self.private_key:
-            if not self.private_key_path:
+        if not self.key:
+            if not self.key_path:
                 raise ValueError(
-                    'Must provide either private_key or private_key_path'
+                    'Must provide either key or key_path'
                 )
-            with open(self.private_key_path, 'rb') as inf:
-                self.private_key = inf.read()
+            with open(self.key_path, 'rb') as inf:
+                self.key = inf.read()
+
+        self.private_key = load_pem_private_key(
+            self.key, None, _CRYPTO_BACKEND
+        )
 
 
 @dataclass()
