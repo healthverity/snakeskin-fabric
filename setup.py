@@ -5,7 +5,7 @@
 
 import io
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 from snakeskin import __version__
 
 ROOT_DIR = os.path.dirname(__file__)
@@ -23,7 +23,7 @@ setup(
     author='HealthVerity',
     url='https://github.com/healthverity/snakeskin/',
     download_url='https://github.com/healthverity/snakeskin/',
-    packages=['snakeskin'],
+    packages=['snakeskin.{}'.format(p) for p in find_packages('snakeskin')] + ['snakeskin'],
     platforms='any',
     install_requires=REQS,
     zip_safe=False,
