@@ -15,14 +15,14 @@ with open('./requirements.txt') as reqs_txt:
     REQS = [line for line in reqs_txt]
 
 setup(
-    name='snakeskin',
+    name='snakeskin-fabric',
     version=__version__,
-    keywords=('Hyperledger Fabric', 'SDK'),
+    keywords=('Hyperledger Fabric', 'SDK', 'Snakeskin'),
     description="An unofficial Python SDK for Hyperledger Fabric",
     long_description=io.open('README.md', encoding='utf-8').read(),
     author='HealthVerity',
-    url='https://github.com/healthverity/snakeskin/',
-    download_url='https://github.com/healthverity/snakeskin/',
+    url='https://github.com/healthverity/snakeskin-fabric/',
+    download_url='https://github.com/healthverity/snakeskin-fabric/',
     packages=['snakeskin.{}'.format(p) for p in find_packages('snakeskin')] + ['snakeskin'],
     platforms='any',
     install_requires=REQS,
