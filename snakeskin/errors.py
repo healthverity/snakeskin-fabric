@@ -7,11 +7,10 @@ from contextlib import contextmanager
 
 import grpc # type: ignore
 
-from .protos.peer.proposal_response_pb2 import ProposalResponse
 from .protos.peer.transaction_pb2 import TxValidationCode
 from .protos.common.common_pb2 import Status
 from .protos.orderer.ab_pb2 import BroadcastResponse
-from .models.transaction import TXContext
+from .models.transaction import EndorsedTX
 
 class BlockchainError(Exception):
     """ Generic blockhchain exception """
@@ -22,9 +21,9 @@ class TransactionError(BlockchainError):
         transaction
     """
 
-    def __init__(self, msg: str, tx_context: TXContext):
+    def __init__(self, msg: str, tx_id: str):
         super().__init__(
-            f'{msg} for tx {tx_context.tx_id} '
+            f'{msg} for tx {tx_id} '
             f'(status: {self.status}): {self.response_message}'
         )
 
@@ -45,10 +44,9 @@ class TrasactionCommitError(TransactionError):
         the orderer
     """
 
-    def __init__(self, msg: str, tx_context: TXContext,
-                 response: BroadcastResponse):
+    def __init__(self, msg: str, tx_id: str, response: BroadcastResponse):
         self.response = response
-        super().__init__(msg, tx_context)
+        super().__init__(msg, tx_id)
 
     @property
     def response_message(self) -> str:
@@ -62,18 +60,22 @@ class TrasactionCommitError(TransactionError):
 class TransactionProposalError(TransactionError):
     """ An exception class for failures in generating a proposal on a peer """
 
-    def __init__(self, msg: str, tx_context: TXContext,
-                 response: ProposalResponse):
-        self.response = response
-        super().__init__(msg, tx_context)
+    def __init__(self, msg: str, transaction: EndorsedTX):
+        self.transaction = transaction
+        super().__init__(msg, transaction.tx_id)
 
     @property
     def response_message(self) -> str:
-        return self.response.response.message
+        for resp in self.transaction.error_responses:
+            if resp.response.message:
+                return resp.response.message
+        return '<no error message>'
 
     @property
     def status(self) -> int:
-        return self.response.response.status
+        for resp in self.transaction.error_responses:
+            return resp.response.status
+        return 0
 
 
 class BlockRetrievalError(BlockchainError):

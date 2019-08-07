@@ -44,8 +44,8 @@ _CRYPTO_BACKEND = default_backend()
 class User:
     """ A model to represent a Hyperledger Fabric User """
 
-    name: str
     msp_id: str
+    name: str = None
     cert_path: Optional[str] = None
     key_path: Optional[str] = None
     cert: Optional[bytes] = None
@@ -101,7 +101,7 @@ class _ConnectedModel:
 
         opts = [
             ("grpc.ssl_target_name_override", self.ssl_target_name)
-        ]
+        ] if self.ssl_target_name else []
 
         # pylint: disable=attribute-defined-outside-init
         # Create GRPC channel
@@ -128,13 +128,9 @@ class _ConnectedModel:
 
 
 @dataclass()
-class _PeerBase:
-    name: str
-
-
-@dataclass()
-class Peer(_ConnectedModel, _PeerBase):
+class Peer(_ConnectedModel):
     """ A model to represent a Hyperledger Fabric Peer """
+    name: Optional[str] = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -145,14 +141,12 @@ class Peer(_ConnectedModel, _PeerBase):
         # pylint: enable=attribute-defined-outside-init
 
 
-@dataclass()
-class _OrdererBase:
-    name: str
 
 
 @dataclass()
-class Orderer(_ConnectedModel, _OrdererBase):
+class Orderer(_ConnectedModel):
     """ A model to represent a Hyperledger Fabric Orderer """
+    name: Optional[str] = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -160,6 +154,8 @@ class Orderer(_ConnectedModel, _OrdererBase):
         self.broadcaster = AtomicBroadcastStub(self._grpc_channel)
         self.deliver = AtomicBroadcastStub(self._grpc_channel)
         # pylint: enable=attribute-defined-outside-init
+        if not self.name:
+            self.name = self.endpoint
 
 
 @dataclass
@@ -173,7 +169,7 @@ class ChaincodeSpec:
     """ A model to specify metadata about a Hyperledger Fabric chaincode
         package
     """
-    name: str
+    name: Optional[str] = None
     version: Optional[str] = None
     language: ChaincodeLanguage = ChaincodeLanguage.GOLANG
     path: Optional[str] = None

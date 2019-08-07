@@ -8,7 +8,6 @@
 import asyncio
 from typing import List
 
-
 from .events import PeerFilteredEvents
 from .protos.orderer.ab_pb2 import BroadcastResponse
 from .models.transaction import (
@@ -110,16 +109,14 @@ async def propose_tx(peers: List[Peer],
 
     peer_responses = await asyncio.gather(*[
         process_proposal_on_peer(
-            tx_context=generated_tx.tx_context,
             proposal=generated_tx.signed_proposal,
             peer=peer,
-            error_msg='Failed to propose transaction',
         ) for peer in peers
     ])
 
     # Return the result object
     return EndorsedTX(
-        peer_responses=peer_responses,
+        peer_responses=list(peer_responses),
         header=generated_tx.header,
         proposal=generated_tx.proposal,
         tx_context=generated_tx.tx_context,
@@ -152,7 +149,7 @@ async def commit_tx(requestor: User,
                     raise TrasactionCommitError(
                         'Failed to commit transaction',
                         response=resp,
-                        tx_context=tx_context
+                        tx_id=tx_context.tx_id
                     )
                 # If response is unsuccessful, try another orderer
                 continue
@@ -165,13 +162,11 @@ def raise_tx_proposal_error(endorsed_tx: EndorsedTX, msg: str):
     """ Raises a TransactionProposalError if any of the peer responses
         in the EndorsedTX is a failure
     """
-    for resp in endorsed_tx.peer_responses:
-        if resp.response.status != 200:
-            raise TransactionProposalError(
-                msg=msg,
-                tx_context=endorsed_tx.tx_context,
-                response=resp
-            )
+    if not endorsed_tx.fully_endorsed:
+        raise TransactionProposalError(
+            msg=msg,
+            transaction=endorsed_tx
+        )
 
 
 async def commit_tx_and_wait(requestor: User,

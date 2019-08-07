@@ -87,7 +87,7 @@ async def create_channel(requestor: User, orderer: Orderer, channel: Channel,
         raise TrasactionCommitError(
             'Failed to create channel',
             response=resp,
-            tx_context=tx_context
+            tx_id=tx_context.tx_id
         )
 
 

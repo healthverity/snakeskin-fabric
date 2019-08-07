@@ -41,17 +41,35 @@ class EndorsedTX:
     tx_context: TXContext
 
     @property
-    def response_payload(self):
+    def response_payload(self) -> bytes:
         """ Gets the response payload from the first valid peer response,
             decoded that response into a string. If there are no valid peer
             responses, this will raise an error
         """
-        for resp in self.peer_responses:
-            if resp.response.status == 200:
-                return resp.response.payload.decode('utf-8')
+        for resp in self.success_responses:
+            return resp.response.payload
         raise ValueError(
             'Could not find a response payload in any of the peer responses'
         )
+
+    @property
+    def error_responses(self):
+        """ All peer responses with an endorsement failure """
+        for resp in self.peer_responses:
+            if resp.response.status != 200:
+                yield resp
+
+    @property
+    def success_responses(self):
+        """ All peer responses with successful endorsement """
+        for resp in self.peer_responses:
+            if resp.response.status == 200:
+                yield resp
+
+    @property
+    def fully_endorsed(self):
+        """ Whether all peers successfully endorsed the response """
+        return all(r.response.status == 200 for r in self.peer_responses)
 
     @property
     def tx_id(self):

@@ -2,13 +2,9 @@
     Manage connections to peer and orderer
 """
 
-from .errors import (
-    handle_conn_errors,
-    TransactionProposalError,
-)
+from .errors import handle_conn_errors
 from .factories import build_envelope_stream
 from .models import Orderer, Peer
-from .models.transaction import TXContext
 from .protos.common.common_pb2 import Envelope
 from .protos.peer.proposal_pb2 import SignedProposal
 from .protos.peer.proposal_response_pb2 import ProposalResponse
@@ -25,19 +21,10 @@ async def broadcast_to_orderer(envelope: Envelope,
             return resp
 
 
-async def process_proposal_on_peer(tx_context: TXContext,
-                                   proposal: SignedProposal,
-                                   peer: Peer,
-                                   error_msg: str) -> ProposalResponse:
+async def process_proposal_on_peer(proposal: SignedProposal,
+                                   peer: Peer) -> ProposalResponse:
     """
         Processes a proposed connection on the peer
     """
     with handle_conn_errors():
-        resp = await peer.endorser.ProcessProposal(proposal)
-        if resp.response.status != 200:
-            raise TransactionProposalError(
-                error_msg,
-                response=resp,
-                tx_context=tx_context
-            )
-        return resp
+        return await peer.endorser.ProcessProposal(proposal)
