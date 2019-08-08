@@ -45,7 +45,7 @@ class _EventHub(Generic[BlockType, TXType]):
                              ) -> TXType:
         """ Gets a transaction by it's ID from the event stream. Note that """
         async for block in self.stream_blocks(start=start, behavior=behavior):
-            for transaction in block.transactions:
+            for transaction in block.transactions: # type: ignore
                 if transaction.tx_id == tx_id:
                     return transaction
         raise RuntimeError('Could not get transaction')

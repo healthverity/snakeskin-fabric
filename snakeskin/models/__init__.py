@@ -45,7 +45,7 @@ class User:
     """ A model to represent a Hyperledger Fabric User """
 
     msp_id: str
-    name: str = None
+    name: Optional[str] = None
     cert_path: Optional[str] = None
     key_path: Optional[str] = None
     cert: Optional[bytes] = None

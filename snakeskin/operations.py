@@ -24,7 +24,7 @@ from .models import (
 
 from .events import OrdererEvents
 
-from .errors import TrasactionCommitError
+from .errors import BlockRetrievalError
 
 from .constants import (
     ChaincodeProposalType,
@@ -39,7 +39,7 @@ from .factories import (
     build_generated_tx
 )
 
-from .tx_flow import (
+from .transact import (
     generate_instantiate_cc_tx,
     generate_cc_tx,
     propose_tx,
@@ -47,18 +47,16 @@ from .tx_flow import (
     commit_tx_and_wait,
 )
 
-from .connect import (
-    broadcast_to_orderer
-)
+from .connect import broadcast_to_orderers
 
 
-async def create_channel(requestor: User, orderer: Orderer, channel: Channel,
-                         tx_file_path: str):
+async def create_channel(requestor: User, orderers: List[Orderer],
+                         channel: Channel, tx_file_path: str):
     """ A high-level operation that creates a channel from a transaction file
         that was generated using the HLF configtxgen tool
 
         :param requestor: The user who will sign all requests
-        :param orderer: An orderer that the transaction will be sent to
+        :param orderers: Orderers that the transaction will be sent to
         :param channel: The channel that is being created
         :param tx_file_path: The disk location of the transaction file
                              that configtxgen created
@@ -72,27 +70,22 @@ async def create_channel(requestor: User, orderer: Orderer, channel: Channel,
         configtx = ConfigUpdateEnvelope.FromString(payload.data)
         config_update = configtx.config_update
 
-    # convert envelope to config
     tx_context = tx_context_from_user(requestor)
-
     envelope = build_config_update_envelope(
         channel=channel,
         tx_context=tx_context,
         config_update=config_update,
         requestor=requestor,
     )
-    resp = await broadcast_to_orderer(envelope=envelope,
-                                      orderer=orderer)
-    if resp.status != 200:
-        raise TrasactionCommitError(
-            'Failed to create channel',
-            response=resp,
-            tx_id=tx_context.tx_id
-        )
+    await broadcast_to_orderers(
+        envelope=envelope,
+        orderers=orderers,
+        tx_id=tx_context.tx_id
+    )
 
 
 async def join_channel(requestor: User,
-                       orderer: Orderer,
+                       orderers: List[Orderer],
                        channel: Channel,
                        peer: Peer):
     """
@@ -105,20 +98,37 @@ async def join_channel(requestor: User,
 
         :param requestor: The user who will sign all requests
         :param peer: A peer that will join the channel
-        :param orderer: An orderer that will be used to find the origin block
-                        for this channel
+        :param orderers: Orderers that will be used to find the origin block
+                         for this channel
         :param channel: The channel that the peer will join
     """
 
-    events = OrdererEvents(
-        requestor=requestor,
-        channel=channel,
-        orderer=orderer
-    )
+    if not orderers:
+        raise ValueError('Must provide at least one orderer')
 
     block = None
-    async for block in events.stream_blocks(start=0, stop=0):
-        break
+    conn_error = None
+    for orderer in orderers:
+
+        events = OrdererEvents(
+            requestor=requestor,
+            channel=channel,
+            orderer=orderer
+        )
+        try:
+            async for block in events.stream_blocks(start=0, stop=0):
+                break
+        except ConnectionError as err:
+            conn_error = err
+
+    if conn_error:
+        raise conn_error
+
+    if not block:
+        raise BlockRetrievalError(
+            'Could not retrieve channel origin block from orderer'
+        )
+
 
     generated_tx = build_generated_tx(
         requestor=requestor,
@@ -297,6 +307,9 @@ async def install_chaincode(requestor: User,
 
         :return: The endorsed transaction
     """
+
+    if not cc_spec.name:
+        raise ValueError('Must provide chaincode name')
 
     cc_pkg = package_chaincode(cc_spec)
 

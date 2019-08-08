@@ -1,8 +1,9 @@
 """
-    Transaction Flow
-    ----------------
+    Transact
+    --------
 
-    This module contains
+    This module contains functions for proposing
+    and committing transactions against the blockchain
 """
 
 import asyncio
@@ -24,17 +25,16 @@ from .models import (
 )
 
 from .constants import ChaincodeProposalType
-from .errors import TrasactionCommitError, TransactionProposalError
+from .errors import TransactionProposalError
 from .factories import (
     build_signature_policy_envelope,
     build_cc_deployment_spec,
     build_generated_tx,
     build_endorsed_tx_envelope,
     encode_proto_bytes,
-    tx_context_from_user
 )
 
-from .connect import broadcast_to_orderer, process_proposal_on_peer
+from .connect import broadcast_to_orderers, process_proposal_on_peer
 
 def generate_instantiate_cc_tx(requestor: User,
                                cc_spec: ChaincodeSpec,
@@ -52,6 +52,9 @@ def generate_instantiate_cc_tx(requestor: User,
     if endorsement_policy:
         sig_policy_env = build_signature_policy_envelope(endorsement_policy)
         policy = sig_policy_env.SerializeToString()
+
+    if not cc_spec.name:
+        raise ValueError('Must specify chaincode name')
 
     cc_deploy_spec = build_cc_deployment_spec(
         name=cc_spec.name,
@@ -131,31 +134,10 @@ async def commit_tx(requestor: User,
         the orderer
     """
 
-    if orderers:
-
-        tx_context = tx_context_from_user(requestor)
-
-
-        for idx, orderer in enumerate(orderers):
-            is_last = len(orderers) - 1 == idx
-
-            envelope = build_endorsed_tx_envelope(endorsed_tx, requestor)
-
-            resp = await broadcast_to_orderer(envelope, orderer)
-
-            if resp.status != 200:
-                # Only raise error for last attempt
-                if is_last:
-                    raise TrasactionCommitError(
-                        'Failed to commit transaction',
-                        response=resp,
-                        tx_id=tx_context.tx_id
-                    )
-                # If response is unsuccessful, try another orderer
-                continue
-            return resp
-
-    raise ValueError('Must provide at least one orderer to commit tx')
+    envelope = build_endorsed_tx_envelope(endorsed_tx, requestor)
+    return await broadcast_to_orderers(
+        envelope, orderers, endorsed_tx.tx_id
+    )
 
 
 def raise_tx_proposal_error(endorsed_tx: EndorsedTX, msg: str):

@@ -83,11 +83,11 @@ class BlockRetrievalError(BlockchainError):
         the orderer
     """
 
-    def __init__(self, msg: str, status: Status):
+    def __init__(self, msg: str, status: Status = None):
         self.status = status
-        super().__init__(
-            f'{msg}: status ({status})'
-        )
+        if self.status:
+            msg = f'{msg}: status ({status})'
+        super().__init__(msg)
 
 
 class BlockchainConnectionError(BlockchainError, ConnectionError):

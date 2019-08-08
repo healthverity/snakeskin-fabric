@@ -19,7 +19,7 @@ class GatewayConfig:
     """ A gateway config object """
     channel: str
     requestor: str
-    cc_name: str
+    chaincode: str
     endorsing_peers: List[str]
     orderers: List[str]
 
@@ -82,7 +82,7 @@ class BlockchainConfig:
             endorsing_peers=[
                 self.get_peer(peer) for peer in config.endorsing_peers
             ],
-            cc_name=config.cc_name,
+            chaincode=self.get_chaincode(config.chaincode),
             requestor=self.get_user(config.requestor),
             orderers=[
                 self.get_orderer(orderer) for orderer in config.orderers
