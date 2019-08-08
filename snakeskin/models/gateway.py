@@ -294,7 +294,7 @@ class GatewayTXBuilder:
                         peer=peer
                     )
                     if raise_errors:
-                        self._filtered_tx = event_hub.check_transaction(
+                        self._filtered_tx = await event_hub.check_transaction(
                             self._endorsed_tx.tx_id,
                             timeout=timeout
                         )
