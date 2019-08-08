@@ -46,7 +46,7 @@ async def broadcast_to_orderers(envelope: Envelope,
     for orderer in orderers:
 
         try:
-            resp = broadcast_to_orderer(envelope, orderer, tx_id)
+            resp = await broadcast_to_orderer(envelope, orderer, tx_id)
         # If connection error, try next orderer
         except BlockchainConnectionError as err:
             error = err
