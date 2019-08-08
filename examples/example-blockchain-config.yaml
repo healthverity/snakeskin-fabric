@@ -1,0 +1,143 @@
+---
+# -----------------------------------------------------------------------------
+# EXAMPLE CONFIG
+#
+# Use this file as a sample blockchain configuration file
+
+# -----------------------------------------------------------------------------
+# PEERS
+#
+# In this section, define any peers that you need to access in your
+# application, as a key/value pair. The keys will be used to refer the peer by
+# name in other parts of the configuration and in your code.
+peers:
+
+  my-peer-name:
+    # An optional peer name to be used in logging, defaults to the key if not
+    # provided
+    name: 'my-peer-name'
+
+    # endpoint: host and port for connecting to the peer instance
+    endpoint: peer.mydomain.com:7051
+
+    # Optional SSL target name for this peer (if different than the endpoint
+    # host)
+    ssl_target_name: peer.mydomain.com
+
+    # Defines either a path to the tls ca cert file, or the actual cert file
+    # contents
+    tls_ca_cert_path: /path/to/tlsca/cert/file/for/peer
+    tls_ca_cert: '<cert contents>'
+
+    # Defines either a path to the client auth cert file, or the actual cert
+    # file contents
+    client_cert_path: /path/to/client/cert/file/for/peer
+    client_cert: '<cert contents>'
+
+    # Defines either a path to the client auth key file, or the actual key file
+    # contents
+    client_key_path: /path/to/client/key/file/for/peer
+    client_key: '<key contents>'
+
+# -----------------------------------------------------------------------------
+# ORDERERS
+#
+# In this section, define any orderers that you need to access in your
+# application, as a key/value pair. The keys will be used to refer the orderer
+# by name in other parts of the configuration and in your code.
+orderers:
+  my-orderer-name:
+    # An optional orderer name to be used in logging, defaults to the key if not
+    # provided
+    name: 'my-orderer-name'
+
+    # endpoint: host and port for connecting to the orderer instance
+    endpoint: orderer.mydomain.com:7051
+
+    # Optional SSL target name for this orderer (if different than the
+    # endpoint host)
+    ssl_target_name: orderer.mydomain.com
+
+    # Defines either a path to the tls ca cert file, or the actual cert file
+    # contents
+    tls_ca_cert_path: /path/to/tlsca/cert/file/for/orderer
+    tls_ca_cert: '<cert contents>'
+
+    # Defines either a path to the client auth cert file, or the actual cert
+    # file contents
+    client_cert_path: /path/to/client/cert/file/for/orderer
+    client_cert: '<cert contents>'
+
+    # Defines either a path to the client auth key file, or the actual key file
+    # contents
+    client_key_path: /path/to/client/key/file/for/orderer
+    client_key: '<key contents>'
+
+# -----------------------------------------------------------------------------
+# USERS
+#
+# In this section, define credentials for users that will be signing requests
+users:
+  my-user-name:
+    # An optional user name to be used in logging, defaults to the key if not
+    # provided
+    name: my-user-name
+    # The MSP ID for this user's organization
+    msp_id: MyOrgMSP
+
+    # Defines either a path to the cert file for this user, or the actual cert
+    # file contents
+    cert_path: /path/to/cert/file/for/user
+    cert: <cert contents>
+
+    # Defines either a path to the key file for this user, or the actual key
+    # file contents
+    key_path: /path/to/key/file/for/user
+    key: <key contents>
+
+# -----------------------------------------------------------------------------
+# CHAINCODES
+#
+# In this section, define any chaincode specifications that will be needed
+chaincodes:
+
+  mycc:
+    # Optional name (unique ID) for this chaincode that will be used in
+    # installation/instantiation. If not provided, defaults to the config key
+    name: mycc
+    # The path to the chaincode within the GOPATH. This is only needed to
+    # install chaincode on a peer
+    path: github.com/org/repo/path/to/chaincode
+    # The optional language of the chaincode (currently only GOLANG is
+    # supported, which is the default)
+    language: GOLANG
+    # An optional chaincode version to specify. This is only needed during
+    # chaincode deployment
+    version: '1.2.4'
+
+# -----------------------------------------------------------------------------
+# GATEWAYS
+#
+# Gateways encompass a grouping of blockchain entities for simplifying
+# transactions against the blockchain.
+
+gateways:
+  my-gateway:
+    # A list of peers that should be used for endorsement, specified using keys
+    # from the `peers` configuration above
+    endorsing_peers:
+      - my-peer-name
+    # A list of orderers that should be used for sending transactions,
+    # specified using keys from the `orderers` configuration above. Note that
+    # the orderers will be sent transactions one at a time in-order, until a
+    # successful response is returned
+    orderers:
+      - my-orderer-name
+    # A user that will be used to sign transactions, specified using a key from
+    # the `users` configuration above
+    requestor: my-user-name
+    # A chaincode that will be used to sign transactions, specified using a key
+    # from the `chaincodes` configuration above
+    chaincode: mycc
+    # The name of the channel that transactions will be sent to
+    channel: my-channel

@@ -18,6 +18,7 @@ setup(
     name='snakeskin-fabric',
     version=__version__,
     keywords=('Hyperledger Fabric', 'SDK', 'Snakeskin'),
+    license='Apache License v2.0',
     description="An unofficial Python SDK for Hyperledger Fabric",
     long_description=io.open('README.md', encoding='utf-8').read(),
     author='HealthVerity',
