@@ -2,4 +2,5 @@
     A Python package for interacting with Hyperledger Fabric blockchains
 """
 
-__version__ = '0.1.0'
+# Version is injected into this file using `make inject-version`
+__version__ = '<REPLACEME>'

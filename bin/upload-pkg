@@ -1,0 +1,13 @@
+#!/bin/bash
+
+if [ -z $TWINE_PASSWORD ]; then
+    echo 'ERROR: Missing TWINE_PASSWORD in environment'
+    exit 1
+fi
+
+if [ -z $TWINE_USERNAME ]; then
+    echo 'ERROR: Missing TWINE_USERNAME in environment'
+    exit 1
+fi
+
+twine upload dist/*
