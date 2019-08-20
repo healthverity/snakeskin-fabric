@@ -325,6 +325,8 @@ class GatewayTXBuilder:
             for operation in self._operations:
                 await operation()
 
+            self._operations.clear()
+
             if self._endorsed_tx:
                 return self._endorsed_tx
 
