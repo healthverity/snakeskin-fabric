@@ -21,6 +21,7 @@ setup(
     license='Apache License v2.0',
     description="An unofficial Python SDK for Hyperledger Fabric",
     long_description=io.open('README.md', encoding='utf-8').read(),
+    long_description_content_type="text/markdown",
     author='HealthVerity',
     url='https://github.com/healthverity/snakeskin-fabric/',
     download_url='https://github.com/healthverity/snakeskin-fabric/',
