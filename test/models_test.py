@@ -4,8 +4,11 @@
 
 from unittest.mock import patch
 
+import pytest
+
 from snakeskin.models import (
-    User, DEFAULT_CRYPTO_BACKEND, Orderer
+    User, DEFAULT_CRYPTO_BACKEND, Orderer,
+    EndorsementPolicyRole, EndorsementPolicy, PolicyExpression
 )
 
 
@@ -25,6 +28,32 @@ def test_user_post_init(load_pem_mock):
     load_pem_mock.assert_called_with(
         b'notactuallyakey', None, DEFAULT_CRYPTO_BACKEND
     )
+
+
+def test_user_missing_key():
+    """ Tests user instantiated without key"""
+    with pytest.raises(ValueError):
+        User(
+            msp_id='MyOrg',
+            name='AdminUser',
+            cert_path='test/resources/certfile',
+        )
+
+
+def test_user_missing_cert():
+    """ Tests user instantiated without cert """
+    with pytest.raises(ValueError):
+        User(
+            msp_id='MyOrg',
+            name='AdminUser',
+            key_path='test/resources/keyfile',
+        )
+
+
+def test_orderer_name():
+    """ Orderer name defaults to endpoint """
+    orderer = Orderer(endpoint='notactuallyahost:7050')
+    assert orderer.name == 'notactuallyahost:7050'
 
 
 @patch('aiogrpc.insecure_channel', autospec=True)
@@ -80,3 +109,51 @@ def test_orderer_client_auth(secure_channel, ssl_creds):
     secure_channel.assert_called_with(
         'notactuallyahost:7050', ssl_creds.return_value, []
     )
+
+
+def test_end_policy_all_roles():
+    """ Tests EndorsementPolicy.all_roles getter """
+    role1 = EndorsementPolicyRole(
+        msp='MyOrg',
+        role='member'
+    )
+    role2 = EndorsementPolicyRole(
+        msp='MyOrg',
+        role='admin'
+    )
+    policy = EndorsementPolicy(
+        expr=PolicyExpression.Or,
+        sub_policies=[
+            EndorsementPolicy(
+                expr=PolicyExpression.And,
+                roles=[role1]
+            )
+        ],
+        roles=[role2]
+    )
+
+    assert policy.all_roles == [role2, role1]
+
+
+def test_end_policy_role_map():
+    """ Tests EndorsementPolicy.role_map getter """
+    role1 = EndorsementPolicyRole(
+        msp='MyOrg',
+        role='member'
+    )
+    role2 = EndorsementPolicyRole(
+        msp='MyOrg',
+        role='admin'
+    )
+    policy = EndorsementPolicy(
+        expr=PolicyExpression.Or,
+        sub_policies=[
+            EndorsementPolicy(
+                expr=PolicyExpression.And,
+                roles=[role1]
+            )
+        ],
+        roles=[role2]
+    )
+
+    assert policy.role_map == {role2: 0, role1: 1}
