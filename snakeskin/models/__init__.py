@@ -198,7 +198,7 @@ class EndorsementPolicy:
     @property
     def all_roles(self):
         """ A recursive list of all roles defined in this endorsement policy """
-        roles = set()
+        roles = set(self.roles)
         for policy in self.sub_policies: # pylint: disable=not-an-iterable
             roles |= set(policy.all_roles)
         return sorted(roles, key=lambda r: f'{r.msp}.{r.role}')
