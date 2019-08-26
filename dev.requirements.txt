@@ -8,3 +8,4 @@ pytest-watch==4.2.0
 pytest-cov==2.7.1
 pytest-asyncio==0.10.0
 asynctest==0.13.0
+pylint-fail-under==0.2.0

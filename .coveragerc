@@ -1,0 +1,5 @@
+[run]
+omit = snakeskin/_hfc/*,snakeskin/protos/*
+
+[report]
+show_missing = True
