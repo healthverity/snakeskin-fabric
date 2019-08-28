@@ -105,8 +105,9 @@ chaincodes:
     # Optional name (unique ID) for this chaincode that will be used in
     # installation/instantiation. If not provided, defaults to the config key
     name: mycc
-    # The path to the chaincode within the GOPATH. This is only needed to
-    # install chaincode on a peer
+    # The path to the chaincode. The SDK with either look this file up in the
+    # GOPATH or interpret it as a direct file path to the chaincode directory.
+    # This is only needed to install chaincode on a peer
     path: github.com/org/repo/path/to/chaincode
     # The optional language of the chaincode (currently only GOLANG is
     # supported, which is the default)
