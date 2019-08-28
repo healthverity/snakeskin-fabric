@@ -1,0 +1,19 @@
+---
+# A set of Docker services for running the AZ DLT application
+
+version: '2.0'
+
+services:
+
+  # ===========================================================================
+  # Utility Services
+  # ===========================================================================
+
+  # A CLI container for running hyperledger fabric commands
+  hlf-cli:
+    image: hyperledger/fabric-tools:1.2.1
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_LOGGING_LEVEL=INFO
+    volumes:
+      - ./network-config:/network-config

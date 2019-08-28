@@ -38,7 +38,7 @@ from ..protos.discovery.protocol_pb2_grpc import DiscoveryStub
 from ..constants import ChaincodeLanguage, PolicyExpression
 from ..crypto import CryptoSuite
 
-_CRYPTO_BACKEND = default_backend()
+DEFAULT_CRYPTO_BACKEND = default_backend()
 
 @dataclass()
 class User:
@@ -70,7 +70,7 @@ class User:
                 self.key = inf.read()
 
         self.private_key = load_pem_private_key(
-            self.key, None, _CRYPTO_BACKEND
+            self.key, None, DEFAULT_CRYPTO_BACKEND
         )
 
 
@@ -106,18 +106,16 @@ class _ConnectedModel:
         # pylint: disable=attribute-defined-outside-init
         # Create GRPC channel
         if self.tls_ca_cert:
-            cred_kwargs = {}
             # Add client credentials if available
             if self.client_cert and self.client_key:
-                cred_kwargs.update({
-                    'private_key': self.client_key,
-                    'certificate_chain': self.client_cert
-                })
-
+                creds = aiogrpc.ssl_channel_credentials(
+                    self.tls_ca_cert,
+                    private_key=self.client_key,
+                    certificate_chain=self.client_cert
+                )
+            else:
+                creds = aiogrpc.ssl_channel_credentials(self.tls_ca_cert)
             # Create secure channel
-            creds = aiogrpc.ssl_channel_credentials(
-                self.tls_ca_cert, **cred_kwargs
-            )
             self._grpc_channel = aiogrpc.secure_channel(
                 self.endpoint, creds, opts
             )
@@ -200,7 +198,7 @@ class EndorsementPolicy:
     @property
     def all_roles(self):
         """ A recursive list of all roles defined in this endorsement policy """
-        roles = set()
+        roles = set(self.roles)
         for policy in self.sub_policies: # pylint: disable=not-an-iterable
             roles |= set(policy.all_roles)
         return sorted(roles, key=lambda r: f'{r.msp}.{r.role}')

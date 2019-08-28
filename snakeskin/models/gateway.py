@@ -3,14 +3,8 @@
 """
 
 import asyncio
-import json
-import os
 from dataclasses import dataclass, field
-from functools import wraps
 from typing import List, Optional, Callable, NoReturn, Awaitable
-
-import yaml
-from dacite import from_dict
 
 from ..errors import BlockRetrievalError, BlockchainError
 from ..models import (
@@ -32,36 +26,10 @@ from ..operations import (
     instantiate_chaincode
 )
 
-def _chain_await(await_func):
-    @wraps(await_func)
-    def _wrapper():
-        return await_func().__await__()
-    return _wrapper
 
 @dataclass()
 class Gateway:
     """ A gateway for accessing the blockchain """
-
-    @classmethod
-    def from_file(cls, file_path: str):
-        """ Loads gateway config from a static file """
-        ext = os.path.splitext(file_path)
-
-        with open(file_path) as inf:
-            if ext == '.json':
-                return cls.from_dict(**json.load(inf))
-            if ext in {'.yaml', '.yml'}:
-                return cls.from_dict(yaml.load(inf, Loader=yaml.SafeLoader))
-
-        raise ValueError(
-            f'Unrecognized file extension for file {file_path}'
-        )
-
-    @classmethod
-    def from_dict(cls, value: dict):
-        """ Creates a gateway config from a dictionary """
-        return from_dict(cls, value)
-
 
     endorsing_peers: List[Peer] = field(default_factory=list)
     orderers: List[Orderer] = field(default_factory=list)

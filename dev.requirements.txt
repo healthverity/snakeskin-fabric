@@ -1,0 +1,11 @@
+-r ./requirements.txt
+pylint==2.3.1
+grpcio-tools==1.22.0
+mypy==0.720
+mypy-protobuf==1.15
+pytest==5.1.1
+pytest-watch==4.2.0
+pytest-cov==2.7.1
+pytest-asyncio==0.10.0
+asynctest==0.13.0
+pylint-fail-under==0.2.0

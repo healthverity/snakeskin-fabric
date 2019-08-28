@@ -1,0 +1,113 @@
+---
+# =============================
+# Initial Network Configuration
+# =============================
+#
+# This file is used by cryptogen and configtxgen to generate initial
+# configuration artifacts for the Hyperledger Fabric blockchain channel,
+# including the genesis block, certificates, and channel creation transactions.
+
+Organizations:
+
+  - &OrdererOrg
+    Name: OrdererOrg
+
+    # ID to load the MSP definition as
+    ID: OrdererOrgMSP
+
+    # MSPDir is the filesystem path which contains the MSP configuration
+    MSPDir:
+      /network-config/crypto/ordererOrganizations/ordererorg.com/msp
+
+    Policies: &OrdererOrgPolicies
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererOrgMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererOrgMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererOrgMSP.admin')"
+
+  - &Org1
+    # DefaultOrg defines the organization which is used in the sampleconfig
+    # of the fabric.git development environment
+    Name: Org1
+
+    # ID to load the MSP definition as
+    ID: Org1MSP
+
+    MSPDir: /network-config/crypto/peerOrganizations/org1.com/msp
+
+    Policies: &Org1Policies
+      Readers:
+        Type: Signature
+        Rule: "OR('Org1MSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('Org1MSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('Org1MSP.admin')"
+
+    AnchorPeers:
+      - Host: org1-peer
+        Port: 7051
+
+  - &Org2
+    # DefaultOrg defines the organization which is used in the sampleconfig
+    # of the fabric.git development environment
+    Name: Org2
+
+    # ID to load the MSP definition as
+    ID: Org2MSP
+
+    MSPDir: /network-config/crypto/peerOrganizations/org2.com/msp
+
+    Policies: &Org1Policies
+      Readers:
+        Type: Signature
+        Rule: "OR('Org2MSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('Org2MSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('Org2MSP.admin')"
+
+    AnchorPeers:
+      - Host: org2-peer
+        Port: 7051
+
+
+Orderer: &Orderer
+  OrdererType: solo
+  Addresses:
+    - orderer:7050
+  Organizations:
+    - *OrdererOrg
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+
+
+Profiles:
+  # The network profile is used to generate the genesis block for the network
+  NetworkProfile:
+    Orderer:
+      <<: *Orderer
+    Consortiums:
+      BCNetworkConsortium:
+        Organizations:
+          - <<: *Org1
+          - <<: *Org2
+  # This profile is used to create a simple channel for BCNetwork
+  BCNetworkChannel:
+    Consortium: BCNetworkConsortium
+    Application:
+      Organizations:
+        - <<: *Org1
+        - <<: *Org2

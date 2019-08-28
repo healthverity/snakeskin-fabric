@@ -1,0 +1,16 @@
+---
+# HLF configuration for generating certificates for the blockchain network
+# using the cryptogen tool
+
+OrdererOrgs:
+  - Name: OrdererOrg
+    Domain: ordererorg.com
+    Specs:
+      - Hostname: orderer
+
+PeerOrgs:
+  - Name: Org1
+    Domain: org1.com
+    EnableNodeOUs: false
+    Specs:
+      - Hostname: peer

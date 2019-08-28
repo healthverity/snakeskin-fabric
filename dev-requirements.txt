@@ -1,5 +1,0 @@
--r ./requirements.txt
-pylint==2.3.1
-grpcio-tools==1.22.0
-mypy==0.720
-mypy-protobuf==1.15
