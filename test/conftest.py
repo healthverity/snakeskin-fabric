@@ -7,9 +7,11 @@ import pytest
 from snakeskin.protos.common.common_pb2 import (
     BlockHeader,
     BlockData,
-    BlockMetadata
+    BlockMetadata,
+    Block
 )
 from snakeskin.models.block import RawBlock
+from snakeskin.models.transaction import DecodedTX
 from snakeskin.models import User
 
 @pytest.fixture()
@@ -29,11 +31,27 @@ def raw_block():
         )
     )
 
+@pytest.fixture()
+def genesis_block():
+    """ A genesis block """
+    with open('network-config/genesis.block', 'rb') as gen_bytes:
+        gen_block = RawBlock.from_proto(Block.FromString(gen_bytes.read()))
+    yield gen_block
+
 
 @pytest.fixture()
+def channel_tx():
+    """ A channel transaction, generated from configtxgen, decoded """
+    with open('network-config/channel.tx', 'rb') as chan_bytes:
+        trans = DecodedTX.decode(chan_bytes.read())
+    yield trans
+
+
+@pytest.fixture(scope='function')
 def org1_user():
     """ User with Org1 MSP """
     yield User(
+        name='Org1User',
         msp_id='Org1MSP',
         cert_path=(
             'network-config/crypto/peerOrganizations/org1.com/users/'

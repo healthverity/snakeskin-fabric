@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Generates a new channel-creation transaction for the blockchain network
+
+set -e
+
+rm -f network-config/channel.tx
+
+docker-compose run --rm \
+    hlf-cli configtxgen \
+        -outputCreateChannelTx /network-config/channel.tx \
+        -profile BCNetworkChannel \
+        -channelID examplechan \
+        -configPath /network-config/
