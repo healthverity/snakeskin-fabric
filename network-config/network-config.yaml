@@ -4,7 +4,7 @@ peers:
     endpoint: localhost:7151
     tls_ca_cert_path:
       ./network-config/crypto/peerOrganizations/org1.com/tlsca/tlsca.org1.com-cert.pem
-    ssl_target_name: org1_peer
+    ssl_target_name: peer.org1.com
 orderers:
   orderer:
     endpoint: localhost:7150
@@ -19,6 +19,13 @@ users:
     key_path:
       ./network-config/crypto/peerOrganizations/org1.com/users/Admin@org1.com/msp/keystore/09ac257cbf389db23b05c93f2acdb94093d8397884d19ca8e6e40a515c1ab34a_sk
 
+chaincodes:
+  helloworld:
+    name: helloworld
+    path: chaincode
+    language: GOLANG
+    version: '0.1.0'
+
 gateways:
   example-gw:
     endorsing_peers:
@@ -27,3 +34,4 @@ gateways:
       - orderer
     requestor: org1_admin
     channel: examplechan
+    chaincode: helloworld

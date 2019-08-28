@@ -1,5 +1,5 @@
 ---
-# A set of Docker services for running the AZ DLT application
+# A set of Docker services for snakeskin testing
 
 version: '2.0'
 
@@ -11,9 +11,107 @@ services:
 
   # A CLI container for running hyperledger fabric commands
   hlf-cli:
-    image: hyperledger/fabric-tools:1.2.1
+    image: hyperledger/fabric-tools
     environment:
       - GOPATH=/opt/gopath
       - CORE_LOGGING_LEVEL=INFO
     volumes:
       - ./network-config:/network-config
+
+  orderer:
+    image: hyperledger/fabric-orderer
+    environment:
+      - ORDERER_GENERAL_LOGLEVEL=DEBUG
+      - ORDERER_GENERAL_LISTENADDRESS=orderer
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/etc/hyperledger/configtx/genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererOrgMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/msp
+      # tls
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/etc/hyperledger/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/etc/hyperledger/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/tls/ca.crt]
+    command: orderer
+    ports:
+      - '7150:7050'
+    volumes:
+      - ./network-config/genesis.block:/etc/hyperledger/configtx/genesis.block
+      - ./network-config/crypto/ordererOrganizations/ordererorg.com/orderers/orderer.ordererorg.com/msp:/etc/hyperledger/msp
+      - ./network-config/crypto/ordererOrganizations/ordererorg.com/orderers/orderer.ordererorg.com/tls:/etc/hyperledger/tls
+      - /var/hyperledger/production/orderer
+
+  peer.org1.com:
+    image: hyperledger/fabric-peer
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer.org1.com
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer.org1.com:7051
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_ADDRESS=peer.org1.com:7051
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=snakeskin_default
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=org1_peer_couch:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/tls/peer/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/tls/peer/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/tls/peer/ca.crt
+    command: peer node start
+    working_dir: /opt/gopath/src/chaincode
+    ports:
+      - '7151:7051'
+      - '7153:7053'
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./network-config/crypto/peerOrganizations/org1.com/peers/peer.org1.com/msp:/etc/hyperledger/msp/peer
+      - ./network-config/crypto/peerOrganizations/org1.com/peers/peer.org1.com/tls:/etc/hyperledger/tls/peer
+
+  # CouchDB container
+  org1_peer_couch:
+    image: hyperledger/fabric-couchdb:0.4.14
+    environment:
+      - COUCHDB_USER=
+      - COUCHDB_PASSWORD=
+    ports:
+      - '5984'
+
+  peer.org2.com:
+    image: hyperledger/fabric-peer
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer.org2.com
+      - CORE_PEER_LOCALMSPID=Org2MSP
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer.org2.com:7051
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_ADDRESS=peer.org2.com:7051
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=snakeskin_default
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=org2_peer_couch:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/tls/peer/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/tls/peer/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/tls/peer/ca.crt
+    command: peer node start
+    working_dir: /opt/gopath/src/chaincode
+    ports:
+      - '7251:7051'
+      - '7253:7053'
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./network-config/crypto/peerOrganizations/org2.com/peers/peer.org2.com/msp:/etc/hyperledger/msp/peer
+      - ./network-config/crypto/peerOrganizations/org2.com/peers/peer.org2.com/tls:/etc/hyperledger/tls/peer
+
+  # CouchDB container
+  org2_peer_couch:
+    image: hyperledger/fabric-couchdb:0.4.14
+    environment:
+      - COUCHDB_USER=
+      - COUCHDB_PASSWORD=
+    ports:
+      - '5984'
