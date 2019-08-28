@@ -5,7 +5,7 @@
 import os
 import json
 from dataclasses import dataclass, field
-from typing import List, Mapping
+from typing import List, Mapping, Optional
 
 import yaml
 import dacite
@@ -19,9 +19,9 @@ class GatewayConfig:
     """ A gateway config object """
     channel: str
     requestor: str
-    chaincode: str
-    endorsing_peers: List[str]
-    orderers: List[str]
+    endorsing_peers: List[str] = field(default_factory=list)
+    orderers: List[str] = field(default_factory=list)
+    chaincode: Optional[str] = None
 
 @dataclass()
 class BlockchainConfig:
@@ -82,7 +82,7 @@ class BlockchainConfig:
             endorsing_peers=[
                 self.get_peer(peer) for peer in config.endorsing_peers
             ],
-            chaincode=self.get_chaincode(config.chaincode),
+            chaincode=self.get_chaincode(config.chaincode) if config.chaincode else None,
             requestor=self.get_user(config.requestor),
             orderers=[
                 self.get_orderer(orderer) for orderer in config.orderers
