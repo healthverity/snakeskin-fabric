@@ -6,6 +6,9 @@ generate-crypto:
 run-tests:
 	pytest
 
+run-e2e-tests:
+	pytest e2e
+
 watch-tests:
 	pytest-watch
 
@@ -15,7 +18,7 @@ lint:
 typecheck:
 	mypy snakeskin && echo 'Type check passed'
 
-ci: run-tests lint typecheck
+ci: run-tests lint typecheck run-e2e-tests
 
 inject-version:
 	bin/inject-version
