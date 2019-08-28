@@ -152,8 +152,6 @@ class Orderer(_ConnectedModel):
         self.broadcaster = AtomicBroadcastStub(self._grpc_channel)
         self.deliver = AtomicBroadcastStub(self._grpc_channel)
         # pylint: enable=attribute-defined-outside-init
-        if not self.name:
-            self.name = self.endpoint
 
 
 @dataclass
