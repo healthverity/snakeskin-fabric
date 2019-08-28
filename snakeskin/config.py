@@ -34,7 +34,7 @@ class BlockchainConfig:
 
         with open(file_path) as inf:
             if ext == '.json':
-                return cls.from_dict(**json.load(inf))
+                return cls.from_dict(json.load(inf))
             if ext in {'.yaml', '.yml'}:
                 return cls.from_dict(yaml.load(inf, Loader=yaml.SafeLoader))
 
