@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+
+if [ -z "$VERSION" ]; then
+    echo 'ERROR: Missing VERSION in environment'
+    exit 1
+fi
+
+remote_name=''
+for r in $(git remote); do
+    url=$(git remote get-url $r)
+    if [[ $url == *'healthverity/snakeskin-fabric'* ]]; then
+        remote_name=$r
+        break
+    fi
+done
+
+
+if [ -z "$remote_name" ]; then
+    echo "ERROR: official repo not found in git remotes"
+    exit 1
+fi
+
+git tag $VERSION
+git push $remote_name $VERSION
