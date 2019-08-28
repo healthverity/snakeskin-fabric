@@ -4,7 +4,7 @@
 
 import os
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import List, Mapping, Optional
 
 import yaml
@@ -60,18 +60,22 @@ class BlockchainConfig:
     def __post_init__(self):
         # Set names to be the mapping key for all entities that weren't
         # provided names
-        for name, peer in self.peers.items():
-            if not peer.name:
-                peer.name = name
-        for name, orderer in self.orderers.items():
-            if not orderer.name:
-                orderer.name = name
-        for name, user in self.users.items():
-            if not user.name:
-                user.name = name
-        for name, chaincode in self.chaincodes.items():
-            if not chaincode.name:
-                chaincode.name = name
+        self.peers = {
+            name: replace(peer, name=peer.name or name)
+            for name, peer in self.peers.items()
+        }
+        self.orderers = {
+            name: replace(orderer, name=orderer.name or name)
+            for name, orderer in self.orderers.items()
+        }
+        self.users = {
+            name: replace(user, name=user.name or name)
+            for name, user in self.users.items()
+        }
+        self.chaincodes = {
+            name: replace(chaincode, name=chaincode.name or name)
+            for name, chaincode in self.chaincodes.items()
+        }
 
     def get_gateway(self, name: str):
         """ Gets a gateway using the config name """
