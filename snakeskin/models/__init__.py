@@ -50,8 +50,8 @@ class User:
     key_path: Optional[str] = None
     cert: Optional[bytes] = None
     key: Optional[bytes] = None
-    crypto_suite: Any = field(default=CryptoSuite.default)
-    private_key: Any = None
+    crypto_suite: Any = field(default=CryptoSuite.default, compare=False)
+    private_key: Any = field(default=None, compare=False)
 
     def __post_init__(self):
 
