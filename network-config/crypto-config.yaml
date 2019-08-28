@@ -14,3 +14,9 @@ PeerOrgs:
     EnableNodeOUs: false
     Specs:
       - Hostname: peer
+
+  - Name: Org2
+    Domain: org2.com
+    EnableNodeOUs: false
+    Specs:
+      - Hostname: peer
