@@ -20,3 +20,9 @@ async def test_upgrade_chaincode(gateway):
     gateway = gateway.update_chaincode_version(version)
     await gateway.install_chaincode()
     await gateway.instantiate_chaincode(upgrade=True)
+
+
+@pytest.mark.asyncio
+async def test_query_inst_chaincodes(gateway):
+    """ Tests querying instantiated chaincodes """
+    assert await gateway.query_instantiated_chaincodes()
