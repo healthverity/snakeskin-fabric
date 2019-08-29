@@ -26,8 +26,8 @@ def dc_up():
     """ Loads docker network """
     check_output(['docker-compose', 'down', '-v'])
     check_output(['docker-compose', 'up', '-d'])
-
-    # check_output(['docker-compose', 'down', '-v'])
+    yield
+    check_output(['docker-compose', 'down', '-v'])
 
 
 @pytest.fixture(scope='session', name='network_config')
