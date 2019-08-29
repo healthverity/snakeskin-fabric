@@ -4,7 +4,7 @@ generate-crypto:
 	bin/crypt-generate
 
 run-tests:
-	pytest
+	pytest --ignore=e2e/
 
 run-e2e-tests:
 	pytest e2e
