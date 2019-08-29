@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+
+docker-compose run --rm \
+    hlf-cli configtxgen \
+        -outputAnchorPeersUpdate /network-config/anchors.tx \
+        -profile BCNetworkChannel\
+        -channelID examplechan \
+        -asOrg Org1 \
+        -configPath /network-config/

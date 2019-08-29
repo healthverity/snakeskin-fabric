@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Generates the genesis block for the blockchain channel
+
+set -e
+
+rm -f network-config/genesis.block
+
+docker-compose run --rm \
+    hlf-cli configtxgen \
+        -outputBlock /network-config/genesis.block \
+        -profile NetworkProfile \
+        -channelID genesis-channel \
+        -configPath /network-config/

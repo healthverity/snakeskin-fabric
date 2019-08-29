@@ -4,8 +4,8 @@
 
 import os
 import json
-from dataclasses import dataclass, field
-from typing import List, Mapping
+from dataclasses import dataclass, field, replace
+from typing import List, Mapping, Optional
 
 import yaml
 import dacite
@@ -19,9 +19,9 @@ class GatewayConfig:
     """ A gateway config object """
     channel: str
     requestor: str
-    chaincode: str
-    endorsing_peers: List[str]
-    orderers: List[str]
+    endorsing_peers: List[str] = field(default_factory=list)
+    orderers: List[str] = field(default_factory=list)
+    chaincode: Optional[str] = None
 
 @dataclass()
 class BlockchainConfig:
@@ -34,7 +34,7 @@ class BlockchainConfig:
 
         with open(file_path) as inf:
             if ext == '.json':
-                return cls.from_dict(**json.load(inf))
+                return cls.from_dict(json.load(inf))
             if ext in {'.yaml', '.yml'}:
                 return cls.from_dict(yaml.load(inf, Loader=yaml.SafeLoader))
 
@@ -60,18 +60,22 @@ class BlockchainConfig:
     def __post_init__(self):
         # Set names to be the mapping key for all entities that weren't
         # provided names
-        for name, peer in self.peers.items():
-            if not peer.name:
-                peer.name = name
-        for name, orderer in self.orderers.items():
-            if not orderer.name:
-                orderer.name = name
-        for name, user in self.users.items():
-            if not user.name:
-                user.name = name
-        for name, chaincode in self.chaincodes.items():
-            if not chaincode.name:
-                chaincode.name = name
+        self.peers = {
+            name: replace(peer, name=peer.name or name)
+            for name, peer in self.peers.items()
+        }
+        self.orderers = {
+            name: replace(orderer, name=orderer.name or name)
+            for name, orderer in self.orderers.items()
+        }
+        self.users = {
+            name: replace(user, name=user.name or name)
+            for name, user in self.users.items()
+        }
+        self.chaincodes = {
+            name: replace(chaincode, name=chaincode.name or name)
+            for name, chaincode in self.chaincodes.items()
+        }
 
     def get_gateway(self, name: str):
         """ Gets a gateway using the config name """
@@ -82,7 +86,7 @@ class BlockchainConfig:
             endorsing_peers=[
                 self.get_peer(peer) for peer in config.endorsing_peers
             ],
-            chaincode=self.get_chaincode(config.chaincode),
+            chaincode=self.get_chaincode(config.chaincode) if config.chaincode else None,
             requestor=self.get_user(config.requestor),
             orderers=[
                 self.get_orderer(orderer) for orderer in config.orderers

@@ -21,7 +21,7 @@ from snakeskin.protos.peer.transaction_pb2 import (
     TxValidationCode
 )
 
-from snakeskin.models.block import RawBlock, DecodedBlock, FilteredBlock
+from snakeskin.models.block import RawBlock, FilteredBlock
 
 def test_raw_block_from_proto(raw_block):
     """ Tests RawBlock.from_proto() """
@@ -46,11 +46,9 @@ def test_raw_block_transactions(raw_block):
     assert raw_block.transactions == [b'']
 
 
-@patch.object(DecodedBlock, 'decode')
-def test_raw_block_decode(db_decode, raw_block):
-    """ Tests RawBlock().transactions """
-    assert raw_block.decode() == db_decode.return_value
-    db_decode.assert_called_with(raw_block)
+def test_raw_block_decode(genesis_block):
+    """ Tests RawBlock().decode """
+    assert genesis_block.decode()
 
 
 def test_raw_block_as_proto(raw_block):
@@ -93,3 +91,8 @@ def test_filt_block_from_proto(tx_from_proto):
         transactions=[tx_from_proto.return_value]
     )
     tx_from_proto.assert_called_with(ftx)
+
+
+def test_decode_block_transactions(genesis_block):
+    """ Tests DecodedBlock().transactions """
+    assert len(genesis_block.decode().transactions) == 1

@@ -58,11 +58,11 @@ class DecodedBlock:
             header=raw_block.header,
             data=_DecodedBlockData(
                 data=[
-                    _decode_block_data(d) for d in raw_block.data.data
+                    DecodedTX.decode(d) for d in raw_block.data.data
                 ]
             ),
             metadata=_DecodedBlockMetadata(
-                metadata=_decode_block_metadata(raw_block.metadata.metadata)
+                metadata=cls._decode_block_metadata(raw_block.metadata.metadata)
             )
         )
 
@@ -72,11 +72,64 @@ class DecodedBlock:
         return self.data.data
 
 
+    @classmethod
+    def _decode_block_metadata(cls, metadata_list: List[bytes]) -> '_DecodedMetadataSequence':
+        last_config_meta = Metadata.FromString(metadata_list[LAST_CONFIG])
+        last_config = LastConfig.FromString(last_config_meta.value)
+        sig_metadata = Metadata.FromString(metadata_list[SIGNATURES])
+        return (
+            _DecodedMetadata(
+                value=sig_metadata.value,
+                signatures=cls._decode_metadata_signatures(sig_metadata)
+            ),
+            _DecodedLastConfigMetadata(
+                value=last_config,
+                signatures=cls._decode_metadata_signatures(last_config_meta),
+            ),
+            list(metadata_list[TRANSACTIONS_FILTER])
+        )
+
+    @staticmethod
+    def _decode_metadata_signatures(metadata: Metadata) -> List['_DecodedMetadataSignature']:
+        return [
+            _DecodedMetadataSignature(
+                signatures=s.signature,
+                signature_header=_DecodedSignatureHeader.decode(s.signature_header),
+            ) for s in metadata.signatures
+        ]
+
+
 @dataclass()
 class DecodedTX:
     """ Decoded BlockDataEnvelope """
     signature: bytes
     payload: '_DecodedPayload'
+
+    @classmethod
+    def decode(cls, envelope_bytes: bytes) -> 'DecodedTX':
+        """ Decode from envelope bytes """
+        envelope = Envelope.FromString(envelope_bytes)
+        payload = Payload.FromString(envelope.payload)
+        header = _DecodedHeader.decode(payload.header)
+        payload_type = TransactionType(header.channel_header.type)
+
+        payload_data: _DecodedPayloadData
+        if payload_type == TransactionType.Config:
+            payload_data = _DecodedConfig.decode(payload.data)
+        elif payload_type == TransactionType.ConfigUpdate:
+            payload_data = _DecodedConfigUpdateEnvelope.decode(payload.data)
+        elif payload_type == TransactionType.EndorserTransaction:
+            payload_data = _DecodedTransactionBody.decode(payload.data)
+        else:
+            payload_data = payload.data
+
+        return cls(
+            signature=envelope.signature,
+            payload=_DecodedPayload(
+                header=header,
+                data=payload_data,
+            )
+        )
 
     @property
     def tx_id(self) -> str:
@@ -89,6 +142,15 @@ class _DecodedSignatureHeader:
     """ Decoded SignatureHeader"""
     creator: SerializedIdentity
     nonce: bytes
+
+    @classmethod
+    def decode(cls, header_bytes: bytes) -> '_DecodedSignatureHeader':
+        """ Decodes from bytes """
+        signature_header = SignatureHeader.FromString(header_bytes)
+        return cls(
+            creator=SerializedIdentity.FromString(signature_header.creator),
+            nonce=signature_header.nonce
+        )
 
 
 @dataclass()
@@ -104,12 +166,37 @@ class _DecodedConfigUpdateEnvelope:
     config_update: ConfigUpdate
     signatures: List[_DecodedConfigUpdateSignature]
 
+    @classmethod
+    def decode(cls, config_update_bytes: bytes) -> '_DecodedConfigUpdateEnvelope':
+        """ Decode from bytes """
+        envelope = ConfigUpdateEnvelope.FromString(config_update_bytes)
+        return cls(
+            config_update=ConfigUpdate.FromString(envelope.config_update),
+            signatures=[
+                _DecodedConfigUpdateSignature(
+                    signature_header=_DecodedSignatureHeader.decode(s.signature_header),
+                    signature=s.signature,
+                )
+                for s in envelope.signatures
+            ]
+        )
+
 
 @dataclass()
 class _DecodedHeader:
     """ Decoded Header """
     channel_header: ChannelHeader
     signature_header: _DecodedSignatureHeader
+
+    @classmethod
+    def decode(cls, header: Header) -> '_DecodedHeader':
+        """ Decodes from proto """
+        return cls(
+            channel_header=ChannelHeader.FromString(header.channel_header),
+            signature_header=_DecodedSignatureHeader.decode(
+                header.signature_header
+            ),
+        )
 
 
 @dataclass()
@@ -131,6 +218,23 @@ class _DecodedConfig:
     """ Decoded Config """
     config: Config
     last_update: _DecodedConfigLastUpdateEnvelope
+
+    @classmethod
+    def decode(cls, config_bytes: bytes) -> '_DecodedConfig':
+        """ Decodes from bytes """
+        config_env = ConfigEnvelope.FromString(config_bytes)
+        last_update_payload = Payload.FromString(config_env.last_update.payload)
+
+        return cls(
+            config=config_env.config,
+            last_update=_DecodedConfigLastUpdateEnvelope(
+                payload=_DecodedConfigLastUpdate(
+                    header=_DecodedHeader.decode(last_update_payload.header),
+                    data=_DecodedConfigUpdateEnvelope.decode(last_update_payload.data)
+                ),
+                signature=config_env.last_update.signature
+            )
+        )
 
 
 @dataclass()
@@ -160,11 +264,45 @@ class _DecodedTransactionAction:
     header: _DecodedSignatureHeader
     payload: _DecodedChaincodeActionPayload
 
+    @classmethod
+    def decode(cls, action: TransactionAction) -> '_DecodedTransactionAction':
+        """ Decodes from a TransactionAction proto """
+        payload = ChaincodeActionPayload.FromString(action.payload)
+
+        return cls(
+            header=_DecodedSignatureHeader.decode(action.header),
+            payload=_DecodedChaincodeActionPayload(
+                action=_DecodedChaincodeEndorsedAction(
+                    proposal_response_payload=ProposalResponsePayload.FromString(
+                        payload.action.proposal_response_payload
+                    ),
+                    endorsements=[
+                        _DecodedEndoresement(
+                            endorser=SerializedIdentity.FromString(e.endorser),
+                            signature=e.signature
+                        ) for e in payload.action.endorsements
+                    ]
+                ),
+                chaincode_proposal_payload=ChaincodeProposalPayload.FromString(
+                    payload.chaincode_proposal_payload
+                )
+            ),
+        )
+
 
 @dataclass()
 class _DecodedTransactionBody:
     """ Decoded Transaction """
     actions: List[_DecodedTransactionAction]
+
+    @classmethod
+    def decode(cls, tx_bytes: bytes) -> '_DecodedTransactionBody':
+        """ Decodes from bytes """
+        transaction = Transaction.FromString(tx_bytes)
+        return _DecodedTransactionBody(
+            actions=[_DecodedTransactionAction.decode(a) for a in transaction.actions]
+        )
+
 
 _DecodedPayloadData = Union[
     _DecodedConfig,
@@ -179,12 +317,6 @@ class _DecodedPayload:
     header: _DecodedHeader
     data: _DecodedPayloadData
 
-    @property
-    def type(self) -> TransactionType:
-        """ Returns the type data based on the header, which is useful
-            for filtering payloads based on type
-        """
-        return TransactionType(self.header.channel_header.type)
 
 @dataclass()
 class _DecodedMetadataSignature:
@@ -221,132 +353,3 @@ class _DecodedBlockMetadata:
 class _DecodedBlockData:
     """ Decoded BlockData """
     data: List[DecodedTX]
-
-
-def _decode_block_data(envelope_bytes: bytes) -> DecodedTX:
-    envelope = Envelope.FromString(envelope_bytes)
-    payload = Payload.FromString(envelope.payload)
-    header = _decode_header(payload.header)
-    payload_type = TransactionType(header.channel_header.type)
-
-    payload_data: _DecodedPayloadData
-    if payload_type == TransactionType.Config:
-        payload_data = _decode_config(payload.data)
-    elif payload_type == TransactionType.ConfigUpdate:
-        payload_data = _decode_config_update(payload.data)
-    elif payload_type == TransactionType.EndorserTransaction:
-        payload_data = _decode_transaction(payload.data)
-    else:
-        payload_data = payload.data
-
-    return DecodedTX(
-        signature=envelope.signature,
-        payload=_DecodedPayload(
-            header=header,
-            data=payload_data,
-        )
-    )
-
-def _decode_header(header: Header) -> _DecodedHeader:
-    return _DecodedHeader(
-        channel_header=_decode_channel_header(header.channel_header),
-        signature_header=_decode_signature_header(header.signature_header),
-    )
-
-
-def _decode_channel_header(header_bytes: bytes) -> ChannelHeader:
-    return ChannelHeader.FromString(header_bytes)
-
-
-def _decode_signature_header(header_bytes: bytes) -> _DecodedSignatureHeader:
-    signature_header = SignatureHeader.FromString(header_bytes)
-    return _DecodedSignatureHeader(
-        creator=SerializedIdentity.FromString(signature_header.creator),
-        nonce=signature_header.nonce
-    )
-
-def _decode_config(config_bytes: bytes) -> _DecodedConfig:
-    config_env = ConfigEnvelope.FromString(config_bytes)
-    last_update_payload = Payload.FromString(config_env.last_update.payload)
-
-    return _DecodedConfig(
-        config=config_env.config,
-        last_update=_DecodedConfigLastUpdateEnvelope(
-            payload=_DecodedConfigLastUpdate(
-                header=_decode_header(last_update_payload.header),
-                data=_decode_config_update(last_update_payload.data)
-            ),
-            signature=config_env.last_update.signature
-        )
-    )
-
-
-def _decode_config_update(config_update_bytes: bytes) -> _DecodedConfigUpdateEnvelope:
-    envelope = ConfigUpdateEnvelope.FromString(config_update_bytes)
-    return _DecodedConfigUpdateEnvelope(
-        config_update=ConfigUpdate.FromString(envelope.config_update),
-        signatures=[
-            _DecodedConfigUpdateSignature(
-                signature_header=_decode_signature_header(s.signature_header),
-                signature=s.signature,
-            )
-            for s in envelope.signatures
-        ]
-    )
-
-
-def _decode_transaction(tx_bytes: bytes) -> _DecodedTransactionBody:
-    transaction = Transaction.FromString(tx_bytes)
-    return _DecodedTransactionBody(
-        actions=[_decode_transaction_action(a) for a in transaction.actions]
-    )
-
-
-def _decode_transaction_action(action: TransactionAction) -> _DecodedTransactionAction:
-    payload = ChaincodeActionPayload.FromString(action.payload)
-
-    return _DecodedTransactionAction(
-        header=_decode_signature_header(action.header),
-        payload=_DecodedChaincodeActionPayload(
-            action=_DecodedChaincodeEndorsedAction(
-                proposal_response_payload=ProposalResponsePayload.FromString(
-                    payload.action.proposal_response_payload
-                ),
-                endorsements=[
-                    _DecodedEndoresement(
-                        endorser=SerializedIdentity.FromString(e.endorser),
-                        signature=e.signature
-                    ) for e in payload.action.endorsements
-                ]
-            ),
-            chaincode_proposal_payload=ChaincodeProposalPayload.FromString(
-                payload.chaincode_proposal_payload
-            )
-        ),
-    )
-
-
-def _decode_block_metadata(metadata_list: List[bytes]) -> _DecodedMetadataSequence:
-    last_config_meta = Metadata.FromString(metadata_list[LAST_CONFIG])
-    last_config = LastConfig.FromString(last_config_meta.value)
-    sig_metadata = Metadata.FromString(metadata_list[SIGNATURES])
-    return (
-        _DecodedMetadata(
-            value=sig_metadata.value,
-            signatures=_decode_metadata_signatures(sig_metadata)
-        ),
-        _DecodedLastConfigMetadata(
-            value=last_config,
-            signatures=_decode_metadata_signatures(last_config_meta),
-        ),
-        list(metadata_list[TRANSACTIONS_FILTER])
-    )
-
-
-def _decode_metadata_signatures(metadata: Metadata) -> List[_DecodedMetadataSignature]:
-    return [
-        _DecodedMetadataSignature(
-            signatures=s.signature,
-            signature_header=_decode_signature_header(s.signature_header),
-        ) for s in metadata.signatures
-    ]

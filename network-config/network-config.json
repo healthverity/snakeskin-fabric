@@ -1,0 +1,35 @@
+{
+  "peers": {
+    "org1_peer": {
+      "endpoint": "localhost:7151",
+      "tls_ca_cert_path": "./network-config/crypto/peerOrganizations/org1.com/tlsca/tlsca.org1.com-cert.pem",
+      "ssl_target_name": "org1_peer"
+    }
+  },
+  "orderers": {
+    "orderer": {
+      "endpoint": "localhost:7150",
+      "tls_ca_cert_path": "./network-config/crypto/ordererOrganizations/ordererorg.com/tlsca/tlsca.ordererorg.com-cert.pem",
+      "ssl_target_name": "orderer"
+    }
+  },
+  "users": {
+    "org1_admin": {
+      "msp_id": "Org1MSP",
+      "cert_path": "./network-config/crypto/peerOrganizations/org1.com/users/Admin@org1.com/msp/signcerts/Admin@org1.com-cert.pem",
+      "key_path": "./network-config/crypto/peerOrganizations/org1.com/users/Admin@org1.com/msp/keystore/09ac257cbf389db23b05c93f2acdb94093d8397884d19ca8e6e40a515c1ab34a_sk"
+    }
+  },
+  "gateways": {
+    "example-gw": {
+      "endorsing_peers": [
+        "org1_peer"
+      ],
+      "orderers": [
+        "orderer"
+      ],
+      "requestor": "org1_admin",
+      "channel": "examplechan"
+    }
+  }
+}

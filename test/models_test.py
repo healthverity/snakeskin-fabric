@@ -50,12 +50,6 @@ def test_user_missing_cert():
         )
 
 
-def test_orderer_name():
-    """ Orderer name defaults to endpoint """
-    orderer = Orderer(endpoint='notactuallyahost:7050')
-    assert orderer.name == 'notactuallyahost:7050'
-
-
 @patch('aiogrpc.insecure_channel', autospec=True)
 def test_orderer_no_certs(insecure_channel):
     """ Tests creates an insecure channel for an orderer if no certs
