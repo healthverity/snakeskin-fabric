@@ -218,7 +218,7 @@ async def query_installed_chaincodes(requestor: User,
         requestor=requestor,
         cc_name='lscc',
         args=[
-            encode_proto_bytes('getchaincodes')
+            encode_proto_bytes('getinstalledchaincodes')
         ],
     )
 
