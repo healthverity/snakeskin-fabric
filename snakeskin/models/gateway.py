@@ -3,7 +3,7 @@
 """
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import List, Optional, Callable, NoReturn, Awaitable
 
 from ..errors import BlockRetrievalError, BlockchainError
@@ -194,6 +194,16 @@ class Gateway:
             upgrade=upgrade,
             endorsement_policy=endorsement_policy,
             timeout=timeout,
+        )
+
+    def update_chaincode_version(self, version: str):
+        """ Updates the chaincode version and returns a new gateway """
+        return replace(
+            self,
+            chaincode=replace(
+                self.chaincode,
+                version=version
+            )
         )
 
 
