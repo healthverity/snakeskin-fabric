@@ -19,10 +19,11 @@ from ..protos.peer.events_pb2 import (
 from ..constants import TransactionType
 
 from ._decoded import DecodedTX # pylint: disable=unused-import
+from ._base import BaseModel
 
 
 @dataclass()
-class TXContext:
+class TXContext(BaseModel):
     """ Contextual information about a Hyperledger Fabric transaction """
     identity: SerializedIdentity
     nonce: bytes
@@ -31,7 +32,7 @@ class TXContext:
 
 
 @dataclass()
-class EndorsedTX:
+class EndorsedTX(BaseModel):
     """ A model to represent a transaction that has been sent out for proposal
         to peers, and returned with endorsements
     """
@@ -78,7 +79,7 @@ class EndorsedTX:
 
 
 @dataclass()
-class GeneratedTX:
+class GeneratedTX(BaseModel):
     """ A model to represent a transaction that has been generated but not
         yet sent for endorsement
     """
@@ -102,7 +103,7 @@ class GeneratedTX:
 
 
 @dataclass()
-class FilteredTX:
+class FilteredTX(BaseModel):
     """ A model to represent filtered transaction data return from a peer's
         event hub
     """

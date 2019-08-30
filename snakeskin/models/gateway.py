@@ -25,6 +25,7 @@ from ..operations import (
     install_chaincode,
     instantiate_chaincode
 )
+from ._base import BaseModel
 
 
 @dataclass()

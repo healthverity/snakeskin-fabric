@@ -15,10 +15,11 @@ from ..protos.peer.events_pb2 import FilteredBlock as _FilteredBlock
 
 from .transaction import FilteredTX
 from ._decoded import DecodedBlock
+from ._base import BaseModel
 
 
 @dataclass()
-class RawBlock:
+class RawBlock(BaseModel):
     """
         A raw Hyperledger block object (not decoded), essentially an extension
         of the HyperledgerFabric Block protobuf
@@ -56,7 +57,7 @@ class RawBlock:
 
 
 @dataclass()
-class FilteredBlock:
+class FilteredBlock(BaseModel):
     """
         The filtered version of a Hyperledger Fabric block that gets returned
         by the peer's event hub, essentially an extension of the

@@ -37,13 +37,12 @@ from ..protos.peer.transaction_pb2 import (
     TransactionAction,
     ChaincodeActionPayload,
 )
-
-
 from ..constants import TransactionType
+from ._base import BaseModel
 
 
 @dataclass()
-class DecodedBlock:
+class DecodedBlock(BaseModel):
     """ A Hyperledger Fabric block, decoded into a normalized data-structure
         decoded
     """
@@ -100,7 +99,7 @@ class DecodedBlock:
 
 
 @dataclass()
-class DecodedTX:
+class DecodedTX(BaseModel):
     """ Decoded BlockDataEnvelope """
     signature: bytes
     payload: '_DecodedPayload'
@@ -138,7 +137,7 @@ class DecodedTX:
 
 
 @dataclass()
-class _DecodedSignatureHeader:
+class _DecodedSignatureHeader(BaseModel):
     """ Decoded SignatureHeader"""
     creator: SerializedIdentity
     nonce: bytes
@@ -154,14 +153,14 @@ class _DecodedSignatureHeader:
 
 
 @dataclass()
-class _DecodedConfigUpdateSignature:
+class _DecodedConfigUpdateSignature(BaseModel):
     """ Decoded ConfigUpdateSignature """
     signature_header: _DecodedSignatureHeader
     signature: bytes
 
 
 @dataclass()
-class _DecodedConfigUpdateEnvelope:
+class _DecodedConfigUpdateEnvelope(BaseModel):
     """ Decoded ConfigUpdate Signature """
     config_update: ConfigUpdate
     signatures: List[_DecodedConfigUpdateSignature]
@@ -183,7 +182,7 @@ class _DecodedConfigUpdateEnvelope:
 
 
 @dataclass()
-class _DecodedHeader:
+class _DecodedHeader(BaseModel):
     """ Decoded Header """
     channel_header: ChannelHeader
     signature_header: _DecodedSignatureHeader
@@ -200,21 +199,21 @@ class _DecodedHeader:
 
 
 @dataclass()
-class _DecodedConfigLastUpdate:
+class _DecodedConfigLastUpdate(BaseModel):
     """ Decoded ConfigLastUpdate """
     header: _DecodedHeader
     data: _DecodedConfigUpdateEnvelope
 
 
 @dataclass()
-class _DecodedConfigLastUpdateEnvelope:
+class _DecodedConfigLastUpdateEnvelope(BaseModel):
     """ Decoded ConfigLastUpdateEnvelope """
     payload: _DecodedConfigLastUpdate
     signature: bytes
 
 
 @dataclass()
-class _DecodedConfig:
+class _DecodedConfig(BaseModel):
     """ Decoded Config """
     config: Config
     last_update: _DecodedConfigLastUpdateEnvelope
@@ -238,28 +237,28 @@ class _DecodedConfig:
 
 
 @dataclass()
-class _DecodedEndoresement:
+class _DecodedEndoresement(BaseModel):
     """ Decoded Endorsement """
     endorser: SerializedIdentity
     signature: bytes
 
 
 @dataclass()
-class _DecodedChaincodeEndorsedAction:
+class _DecodedChaincodeEndorsedAction(BaseModel):
     """ Decoded ChaincodeEndorsedAction """
     proposal_response_payload: ProposalResponsePayload
     endorsements: List[_DecodedEndoresement]
 
 
 @dataclass()
-class _DecodedChaincodeActionPayload:
+class _DecodedChaincodeActionPayload(BaseModel):
     """ Decoded ChaincodeActionPayload """
     action: _DecodedChaincodeEndorsedAction
     chaincode_proposal_payload: ChaincodeProposalPayload
 
 
 @dataclass()
-class _DecodedTransactionAction:
+class _DecodedTransactionAction(BaseModel):
     """ Decoded TransactionAction """
     header: _DecodedSignatureHeader
     payload: _DecodedChaincodeActionPayload
@@ -291,7 +290,7 @@ class _DecodedTransactionAction:
 
 
 @dataclass()
-class _DecodedTransactionBody:
+class _DecodedTransactionBody(BaseModel):
     """ Decoded Transaction """
     actions: List[_DecodedTransactionAction]
 
@@ -312,27 +311,27 @@ _DecodedPayloadData = Union[
 ]
 
 @dataclass()
-class _DecodedPayload:
+class _DecodedPayload(BaseModel):
     """ Decoded Payload """
     header: _DecodedHeader
     data: _DecodedPayloadData
 
 
 @dataclass()
-class _DecodedMetadataSignature:
+class _DecodedMetadataSignature(BaseModel):
     """ Decoded MetadataSignature """
     signatures: bytes
     signature_header: _DecodedSignatureHeader
 
 
 @dataclass()
-class _DecodedLastConfigMetadata:
+class _DecodedLastConfigMetadata(BaseModel):
     """ Decoded LastConfigMetadata """
     signatures: List[_DecodedMetadataSignature]
     value: LastConfig
 
 @dataclass()
-class _DecodedMetadata:
+class _DecodedMetadata(BaseModel):
     """ Decoded Metadata """
     signatures: List[_DecodedMetadataSignature]
     value: bytes
@@ -344,12 +343,12 @@ _DecodedMetadataSequence = Tuple[
 
 
 @dataclass()
-class _DecodedBlockMetadata:
+class _DecodedBlockMetadata(BaseModel):
     """ Decoded BlockMetadata """
     metadata: _DecodedMetadataSequence
 
 
 @dataclass()
-class _DecodedBlockData:
+class _DecodedBlockData(BaseModel):
     """ Decoded BlockData """
     data: List[DecodedTX]

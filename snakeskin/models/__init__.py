@@ -37,11 +37,13 @@ from ..protos.discovery.protocol_pb2_grpc import DiscoveryStub
 
 from ..constants import ChaincodeLanguage, PolicyExpression
 from ..crypto import CryptoSuite
+from ._base import BaseModel
 
 DEFAULT_CRYPTO_BACKEND = default_backend()
 
+
 @dataclass()
-class User:
+class User(BaseModel):
     """ A model to represent a Hyperledger Fabric User """
 
     msp_id: str
@@ -75,7 +77,7 @@ class User:
 
 
 @dataclass()
-class _ConnectedModel:
+class _ConnectedModel(BaseModel):
     """ A base model to represent Hyperledger Fabric infrastructure that is
         accessible via a gRPC connection
     """
@@ -155,13 +157,13 @@ class Orderer(_ConnectedModel):
 
 
 @dataclass
-class Channel:
+class Channel(BaseModel):
     """ A model to represent a Hyperledger Fabric Channel """
     name: str
 
 
 @dataclass()
-class ChaincodeSpec:
+class ChaincodeSpec(BaseModel):
     """ A model to specify metadata about a Hyperledger Fabric chaincode
         package
     """
@@ -173,7 +175,7 @@ class ChaincodeSpec:
 
 
 @dataclass(unsafe_hash=True)
-class EndorsementPolicyRole:
+class EndorsementPolicyRole(BaseModel):
     """ A role specified for an EndorsementPolicy"""
     msp: str
     role: str
@@ -183,7 +185,7 @@ class EndorsementPolicyRole:
 
 
 @dataclass()
-class EndorsementPolicy:
+class EndorsementPolicy(BaseModel):
     """ A structured object to represent a Hyperledger Fabric endorsement
         policy
     """
