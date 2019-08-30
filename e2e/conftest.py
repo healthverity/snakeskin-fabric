@@ -4,12 +4,12 @@
 
 
 import asyncio
-from time import sleep
 from subprocess import check_output
 
 import pytest
+
 from snakeskin.config import BlockchainConfig
-from snakeskin.operations import query_installed_chaincodes
+from snakeskin.operations import query_installed_chaincodes, query_instantiated_chaincodes
 from snakeskin.events import OrdererEvents
 from snakeskin.models import Channel
 
@@ -21,59 +21,75 @@ def event_loop():
     yield loop
     loop.close()
 
-@pytest.fixture(scope='session', name='docker_network', autouse=True)
-def dc_up():
-    """ Loads docker network """
+
+@pytest.fixture(scope='session', name='network_config', autouse=True)
+async def prepare_network():
+    """ Configuration for the network """
+    config = BlockchainConfig.from_file('network-config/network-config.yaml')
+    org1_admin = config.get_user('org1_admin')
+    org2_admin = config.get_user('org2_admin')
+    org1_peer = config.get_peer('org1_peer')
+    org2_peer = config.get_peer('org2_peer')
+    org1_gw = config.get_gateway('org1_gw')
+    org2_gw = config.get_gateway('org2_gw')
+
     check_output(['docker-compose', 'down', '-v'])
     check_output(['docker-compose', 'up', '-d'])
-    yield
-    check_output(['docker-compose', 'down', '-v'])
-
-
-@pytest.fixture(scope='session', name='network_config')
-def load_network_config():
-    """ Configuration for the network """
-    return BlockchainConfig.from_file('network-config/network-config.yaml')
-
-
-@pytest.fixture(scope='session', name='gateway')
-async def load_example_gateway(network_config, docker_network):
-    """ Loads the `example-gw` Gateway """
-
-    gateway = network_config.get_gateway('example-gw')
-
-    await asyncio.gather(
-        *(
-            _wait_for_orderer(orderer=o, requestor=gateway.requestor)
-            for o in gateway.orderers
+    await asyncio.wait_for(
+        asyncio.gather(
+            _wait_for_orderer(org1_admin, config.get_orderer('orderer')),
+            _wait_for_peer(org1_admin, org1_peer),
+            _wait_for_peer(org2_admin, org2_peer),
         ),
-        *(
-            _wait_for_peer(peer=p, requestor=gateway.requestor)
-            for p in gateway.endorsing_peers
-        ),
+        timeout=40
     )
-    return gateway
+
+    await org1_gw.create_channel(tx_file_path='network-config/channel.tx')
+    await org1_gw.join_channel(peers=[org1_peer])
+    await org2_gw.join_channel(peers=[org2_peer])
+    await org1_gw.install_chaincode(peers=[org1_peer])
+    await org2_gw.install_chaincode(peers=[org2_peer])
+    await org1_gw.instantiate_chaincode()
+    channel = org1_gw.channel
+    chaincode = org1_gw.chaincode
+    await asyncio.wait_for(
+        asyncio.gather(
+            _wait_for_instantiation(org1_admin, org1_peer, channel, chaincode),
+            _wait_for_instantiation(org2_admin, org2_peer, channel, chaincode)
+        )
+    , timeout=60)
+
+    yield config
+
+    # check_output(['docker-compose', 'down', '-v'])
 
 
+@pytest.fixture(scope='session', name='org1_gw')
+def load_org1_gateway(network_config):
+    """ Loads the `org1_gw` Gateway """
+    return network_config.get_gateway('org1_gw')
 
-@pytest.fixture(autouse=True, scope='session', name='channel')
-async def create_channel(gateway):
-    """ Creates the channel in the default gateway """
-    await gateway.create_channel(tx_file_path='network-config/channel.tx')
-    await gateway.join_channel()
-    return gateway.channel
+
+@pytest.fixture(scope='session', name='org2_gw')
+def load_org2_gateway(network_config):
+    """ Loads the `org2_gw` Gateway """
+    return network_config.get_gateway('org2_gw')
+
+
+@pytest.fixture(scope='session', name='channel')
+def get_channel(org1_gw):
+    """ Gets channel in default gw """
+    yield org1_gw.channel
 
 
 @pytest.fixture(autouse=True, scope='session', name='chaincode')
-async def deploy_chaincode(channel, gateway):
-    await gateway.install_chaincode()
-    await gateway.instantiate_chaincode()
-
+def get_chaincode(org1_gw):
+    """ Gets chaincode in default gw """
+    yield org1_gw.chaincode
 
 
 async def _wait_for_orderer(requestor, orderer):
-    sleep_time = .5
-    for i in range(30):
+    while True:
         try:
             evts = OrdererEvents(
                 requestor=requestor,
@@ -84,17 +100,28 @@ async def _wait_for_orderer(requestor, orderer):
                 return
         except ConnectionError:
             pass
-        sleep(sleep_time)
-    raise TimeoutError('Timed out waiting for orderer to come on-line')
 
 
 async def _wait_for_peer(requestor, peer):
-    sleep_time = .5
-    for i in range(30):
+    while True:
         try:
             await query_installed_chaincodes(requestor, peer)
             return
         except ConnectionError:
             pass
-        sleep(sleep_time)
-    raise TimeoutError('Timed out waiting for peer to come on-line')
+
+
+async def _wait_for_instantiation(requestor, peer, channel, chaincode):
+    while True:
+        resp = await query_instantiated_chaincodes(
+            requestor=requestor,
+            peers=[peer],
+            channel=channel
+        )
+
+        for cc_info in resp.chaincodes:
+            if (
+                    cc_info.name == chaincode.name
+                    and cc_info.version == chaincode.version
+            ):
+                return

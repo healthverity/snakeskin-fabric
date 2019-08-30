@@ -46,7 +46,6 @@ services:
     environment:
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_PEER_ID=peer.org1.com
-      - FABRIC_LOGGING_SPEC=DEBUG
       - CORE_PEER_LOCALMSPID=Org1MSP
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer.org1.com:7051
       - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
