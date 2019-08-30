@@ -8,7 +8,7 @@ from typing import List, Optional, Callable, NoReturn, Awaitable
 
 from ..errors import BlockRetrievalError, BlockchainError
 from ..models import (
-    Peer, Channel, User, Orderer, ChaincodeSpec, EndorsementPolicy
+    Peer, Channel, User, Orderer, ChaincodeSpec
 )
 from ..models.transaction import EndorsedTX, GeneratedTX, FilteredTX
 from ..events import PeerFilteredEvents
@@ -153,29 +153,42 @@ class Gateway:
             channel=self.channel
         )
 
-    async def install_chaincode(self, peers: Optional[List[Peer]] = None):
+    async def install_chaincode(self,
+                                peers: Optional[List[Peer]] = None,
+                                cc_spec: Optional[ChaincodeSpec] = None):
         """
-            Installs chaincode on all peers for this gateway
+            Installs chaincode on all peers for this gateway, optionally using
+            the chaincode specification provided.
+
+            Note that if a chaincode specification is provided, the `chaincode`
+            property of this gateway will be updated upon successful install.
         """
 
         if not peers:
             peers = self.endorsing_peers
 
+        if not cc_spec:
+            cc_spec = self.chaincode
+
         if not self.requestor:
             raise ValueError('Must specify a requestor')
         if not peers:
             raise ValueError('Must specify at least one peer')
-        if not self.chaincode:
+        if not cc_spec:
             raise ValueError('Must specify chaincode')
 
-        return await install_chaincode(
+        resp = await install_chaincode(
             requestor=self.requestor,
             peers=peers,
-            cc_spec=self.chaincode,
+            cc_spec=cc_spec,
         )
 
+        if cc_spec != self.chaincode:
+            self.chaincode = cc_spec
+
+        return resp
+
     async def instantiate_chaincode(self,
-                                    endorsement_policy: EndorsementPolicy = None,
                                     upgrade: bool = False,
                                     timeout: int = 30):
         """
@@ -199,7 +212,6 @@ class Gateway:
             channel=self.channel,
             cc_spec=self.chaincode,
             upgrade=upgrade,
-            endorsement_policy=endorsement_policy,
             timeout=timeout,
         )
 

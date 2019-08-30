@@ -12,7 +12,7 @@ import dacite
 
 from .models import Peer, Channel, User, Orderer, ChaincodeSpec
 from .models.gateway import Gateway
-from .constants import ChaincodeLanguage
+from .constants import ChaincodeLanguage, PolicyExpression
 
 @dataclass()
 class GatewayConfig:
@@ -47,7 +47,8 @@ class BlockchainConfig:
         """ Creates a gateway config from a dictionary """
         return dacite.from_dict(cls, value, config=dacite.Config(
             type_hooks={
-                ChaincodeLanguage: ChaincodeLanguage
+                ChaincodeLanguage: ChaincodeLanguage,
+                PolicyExpression: PolicyExpression
             }
         ))
 

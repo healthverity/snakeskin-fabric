@@ -364,7 +364,6 @@ async def instantiate_chaincode(requestor: User,
                                 orderers: List[Orderer],
                                 channel: Channel,
                                 cc_spec: ChaincodeSpec,
-                                endorsement_policy: EndorsementPolicy = None,
                                 upgrade: bool = False,
                                 timeout: int = 60) -> EndorsedTX:
     """
@@ -406,7 +405,6 @@ async def instantiate_chaincode(requestor: User,
         requestor=requestor,
         cc_spec=cc_spec,
         channel=channel,
-        endorsement_policy=endorsement_policy,
         upgrade=upgrade
     )
 

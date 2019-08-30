@@ -39,7 +39,6 @@ from .connect import broadcast_to_orderers, process_proposal_on_peer
 def generate_instantiate_cc_tx(requestor: User,
                                cc_spec: ChaincodeSpec,
                                channel: Channel,
-                               endorsement_policy: EndorsementPolicy = None,
                                upgrade: bool = False) -> GeneratedTX:
     """ Generates an instantiate/upgrade transaction """
 
@@ -49,8 +48,10 @@ def generate_instantiate_cc_tx(requestor: User,
         proposal_type = ChaincodeProposalType.Instantiate
 
     policy = None
-    if endorsement_policy:
-        sig_policy_env = build_signature_policy_envelope(endorsement_policy)
+    if cc_spec.endorsement_policy:
+        sig_policy_env = build_signature_policy_envelope(
+            cc_spec.endorsement_policy
+        )
         policy = sig_policy_env.SerializeToString()
 
     if not cc_spec.name:

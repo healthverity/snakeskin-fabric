@@ -172,6 +172,7 @@ class ChaincodeSpec(BaseModel):
     language: ChaincodeLanguage = ChaincodeLanguage.GOLANG
     path: Optional[str] = None
     args: Optional[List[str]] = None
+    endorsement_policy: Optional['EndorsementPolicy'] = None
 
 
 @dataclass(unsafe_hash=True)
