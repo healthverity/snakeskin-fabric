@@ -152,18 +152,24 @@ class Gateway:
             channel=self.channel
         )
 
-    async def install_chaincode(self):
+    async def install_chaincode(self, peers: Optional[List[Peer]] = None):
         """
             Installs chaincode on all peers for this gateway
         """
+
+        if not peers:
+            peers = self.endorsing_peers
+
         if not self.requestor:
             raise ValueError('Must specify a requestor')
-        if not self.endorsing_peers:
-            raise ValueError('Must specify at least one endorsing peer')
+        if not peers:
+            raise ValueError('Must specify at least one peer')
+        if not self.chaincode:
+            raise ValueError('Must specify chaincode')
 
         return await install_chaincode(
             requestor=self.requestor,
-            peers=self.endorsing_peers,
+            peers=peers,
             cc_spec=self.chaincode,
         )
 
