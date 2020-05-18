@@ -4,8 +4,16 @@ set -e
 
 docker-compose run --rm \
     hlf-cli configtxgen \
-        -outputAnchorPeersUpdate /network-config/anchors.tx \
+        -outputAnchorPeersUpdate /network-config/org1-anchors.tx \
         -profile BCNetworkChannel\
         -channelID examplechan \
         -asOrg Org1 \
+        -configPath /network-config/
+
+docker-compose run --rm \
+    hlf-cli configtxgen \
+        -outputAnchorPeersUpdate /network-config/org2-anchors.tx \
+        -profile BCNetworkChannel\
+        -channelID examplechan \
+        -asOrg Org2 \
         -configPath /network-config/

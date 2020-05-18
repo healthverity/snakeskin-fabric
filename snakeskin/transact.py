@@ -7,7 +7,7 @@
 """
 
 import asyncio
-from typing import List
+from typing import List, Union, AsyncIterator
 
 from .events import PeerFilteredEvents
 from .protos.orderer.ab_pb2 import BroadcastResponse
@@ -23,9 +23,10 @@ from .models import (
     ChaincodeSpec,
     EndorsementPolicy,
 )
+from .models.endorsement import EndorsementPeerProvider
 
 from .constants import ChaincodeProposalType
-from .errors import TransactionProposalError
+from .errors import TransactionProposalError, BlockchainError
 from .factories import (
     build_signature_policy_envelope,
     build_cc_deployment_spec,
@@ -34,7 +35,9 @@ from .factories import (
     encode_proto_bytes,
 )
 
-from .connect import broadcast_to_orderers, process_proposal_on_peer
+from .connect import (
+    broadcast_to_orderers, process_proposal_on_peer, first_proposal_success
+)
 
 def generate_instantiate_cc_tx(requestor: User,
                                cc_spec: ChaincodeSpec,
@@ -102,7 +105,7 @@ def generate_cc_tx(requestor: User,
     )
 
 
-async def propose_tx(peers: List[Peer],
+async def propose_tx(peers: Union[List[Peer], EndorsementPeerProvider],
                      generated_tx: GeneratedTX) -> EndorsedTX:
     """ Execute a transaction proposal across all provided peers, raising an
         error if any of the peers fails to propose the transaction
@@ -111,12 +114,26 @@ async def propose_tx(peers: List[Peer],
     if not peers:
         raise ValueError('Must provide at least one peer to propose a tx')
 
-    peer_responses = await asyncio.gather(*[
-        process_proposal_on_peer(
-            proposal=generated_tx.signed_proposal,
-            peer=peer,
-        ) for peer in peers
-    ])
+    # If an endorsement peer provider is used, we attempt to find a successful
+    # proposal for each endorsing group, multiplied by the number of required
+    # endorsements for that group
+    if isinstance(peers, EndorsementPeerProvider):
+        peer_responses = await asyncio.gather(*[
+            first_proposal_success(
+                proposal=generated_tx.signed_proposal,
+                peers=peer_iter
+            )
+            for required_peers, peer_iter in peers.provide_endorsing_groups()
+            for _ in range(required_peers)
+
+        ])
+    else:
+        peer_responses = await asyncio.gather(*[
+            process_proposal_on_peer(
+                proposal=generated_tx.signed_proposal,
+                peer=peer,
+            ) for peer in peers
+        ])
 
     # Return the result object
     return EndorsedTX(
@@ -170,3 +187,4 @@ async def commit_tx_and_wait(requestor: User,
 
     event_hub = PeerFilteredEvents(requestor, channel, peers[0])
     await event_hub.check_transaction(endorsed_tx.tx_context.tx_id, timeout)
+

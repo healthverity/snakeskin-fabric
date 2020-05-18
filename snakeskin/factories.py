@@ -54,6 +54,19 @@ from .protos.orderer.ab_pb2 import (
     SeekInfo
 )
 
+from .protos.discovery.protocol_pb2 import (
+    ChaincodeCall,
+    Query,
+    PeerMembershipQuery,
+    ChaincodeInterest,
+    Request,
+    AuthInfo,
+    SignedRequest,
+    ConfigQuery,
+    ChaincodeQuery,
+    LocalPeerQuery
+)
+
 from .models import (
     Channel,
     User,
@@ -466,4 +479,60 @@ def build_generated_tx(requestor: User,
         signed_proposal=signed_proposal,
         proposal=proposal,
         header=header
+    )
+
+
+def build_discovery_request(requestor: User,
+                            channel: Channel,
+                            cc_name: str) -> SignedRequest:
+    """ Builds a discovery SignedRequest to get an endorsing peer layout
+    """
+
+    chaincode = ChaincodeCall(name=cc_name)
+
+    chaincode_interest = ChaincodeInterest(
+        chaincodes=[chaincode]
+    )
+
+    peer_membership_query = Query(
+        channel=channel.name,
+        peer_query=PeerMembershipQuery(
+            filter=chaincode_interest
+        )
+    )
+    config_query = Query(
+        channel=channel.name,
+        config_query=ConfigQuery()
+    )
+
+    cc_query = Query(
+        channel=channel.name,
+        cc_query=ChaincodeQuery(
+            interests=[chaincode_interest]
+        )
+    )
+
+    local_peer_query = Query(
+        local_peers=LocalPeerQuery(),
+    )
+
+    tx_context = tx_context_from_user(requestor)
+
+    request = Request(
+        authentication=AuthInfo(
+            client_identity=tx_context.identity.SerializeToString()
+        ),
+        queries=[
+            config_query,
+            peer_membership_query,
+            cc_query,
+            local_peer_query,
+        ]
+    )
+
+    request_bytes = request.SerializeToString()
+
+    return SignedRequest(
+        payload=request_bytes,
+        signature=sign(user=requestor, payload=request_bytes)
     )

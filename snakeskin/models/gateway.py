@@ -29,7 +29,7 @@ from ._base import BaseModel
 
 
 @dataclass()
-class Gateway:
+class Gateway(BaseModel):
     """ A gateway for accessing the blockchain """
 
     endorsing_peers: List[Peer] = field(default_factory=list)
@@ -37,6 +37,14 @@ class Gateway:
     channel: Optional[Channel] = None
     requestor: Optional[User] = None
     chaincode: Optional[ChaincodeSpec] = None
+
+    @classmethod
+    async def discover(cls,
+                       requestor: User,
+                       peer: Peer,
+                       channel: Channel,
+                       cc_name: str) -> 'Gateway':
+        """ Uses a requestor and peer to discover a gateway configuration """
 
     def transact(self,
                  fcn: str,

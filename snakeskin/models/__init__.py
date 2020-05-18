@@ -127,9 +127,10 @@ class _ConnectedModel(BaseModel):
         # pylint: enable=attribute-defined-outside-init
 
 
-@dataclass()
+@dataclass(eq=True, frozen=True)
 class Peer(_ConnectedModel):
     """ A model to represent a Hyperledger Fabric Peer """
+    msp_id: Optional[str] = None
     name: Optional[str] = None
 
     def __post_init__(self):
@@ -146,6 +147,7 @@ class Peer(_ConnectedModel):
 @dataclass()
 class Orderer(_ConnectedModel):
     """ A model to represent a Hyperledger Fabric Orderer """
+    msp_id: Optional[str] = None
     name: Optional[str] = None
 
     def __post_init__(self):

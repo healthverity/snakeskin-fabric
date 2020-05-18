@@ -11,6 +11,7 @@ from typing import List
 from .protos.peer.query_pb2 import ChaincodeQueryResponse
 from .protos.common.configtx_pb2 import ConfigUpdateEnvelope
 from .protos.common.common_pb2 import Envelope, Payload
+from .protos.discovery.protocol_pb2 import Response
 
 from .models.transaction import EndorsedTX
 from .models import (
@@ -36,7 +37,8 @@ from .factories import (
     encode_proto_bytes,
     build_cc_deployment_spec,
     build_config_update_envelope,
-    build_generated_tx
+    build_generated_tx,
+    build_discovery_request
 )
 
 from .transact import (
@@ -47,7 +49,7 @@ from .transact import (
     commit_tx_and_wait,
 )
 
-from .connect import broadcast_to_orderers
+from .connect import broadcast_to_orderers, process_peer_discovery
 
 
 async def create_channel(requestor: User, orderers: List[Orderer],
@@ -564,3 +566,21 @@ async def query(requestor: User,
     )
 
     return endorsed_tx
+
+
+async def discover(requestor: User,
+                   peer: Peer,
+                   channel: Channel,
+                   cc_name: str) -> Response:
+    """ Connects to the Peer node, and discovers connection details about the
+        current state of the network configuration
+    """
+    req = build_discovery_request(
+        requestor=requestor,
+        channel=channel,
+        cc_name=cc_name
+    )
+    return await process_peer_discovery(
+        request=req,
+        peer=peer
+    )
