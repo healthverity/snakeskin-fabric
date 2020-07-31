@@ -4,7 +4,12 @@ peers:
     endpoint: localhost:7151
     tls_ca_cert_path:
       ./network-config/crypto/peerOrganizations/org1.com/tlsca/tlsca.org1.com-cert.pem
-    ssl_target_name: org1_peer
+    ssl_target_name: peer.org1.com
+  org2_peer:
+    endpoint: localhost:7251
+    tls_ca_cert_path:
+      ./network-config/crypto/peerOrganizations/org2.com/tlsca/tlsca.org2.com-cert.pem
+    ssl_target_name: peer.org2.com
 orderers:
   orderer:
     endpoint: localhost:7150
@@ -18,12 +23,36 @@ users:
       ./network-config/crypto/peerOrganizations/org1.com/users/Admin@org1.com/msp/signcerts/Admin@org1.com-cert.pem
     key_path:
       ./network-config/crypto/peerOrganizations/org1.com/users/Admin@org1.com/msp/keystore/09ac257cbf389db23b05c93f2acdb94093d8397884d19ca8e6e40a515c1ab34a_sk
+  org2_admin:
+    msp_id: Org2MSP
+    cert_path:
+      ./network-config/crypto/peerOrganizations/org2.com/users/Admin@org2.com/msp/signcerts/Admin@org2.com-cert.pem
+    key_path:
+      ./network-config/crypto/peerOrganizations/org2.com/users/Admin@org2.com/msp/keystore/5a490a6a8529ed9a2a4442ed44f24cc53c2db733bb025b63ce605719f3184ae2_sk
+
+chaincodes:
+  helloworld:
+    name: helloworld
+    path: chaincode
+    language: GOLANG
+    version: '0.1.0'
 
 gateways:
-  example-gw:
+  org1_gw:
     endorsing_peers:
       - org1_peer
+      - org2_peer
     orderers:
       - orderer
     requestor: org1_admin
     channel: examplechan
+    chaincode: helloworld
+  org2_gw:
+    endorsing_peers:
+      - org1_peer
+      - org2_peer
+    orderers:
+      - orderer
+    requestor: org2_admin
+    channel: examplechan
+    chaincode: helloworld

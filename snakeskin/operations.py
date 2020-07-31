@@ -218,7 +218,7 @@ async def query_installed_chaincodes(requestor: User,
         requestor=requestor,
         cc_name='lscc',
         args=[
-            encode_proto_bytes('getchaincodes')
+            encode_proto_bytes('getinstalledchaincodes')
         ],
     )
 
@@ -244,20 +244,34 @@ def package_chaincode(cc_spec: ChaincodeSpec):
     if cc_spec.language == ChaincodeLanguage.GOLANG:
         if not cc_spec.path:
             raise ValueError('Must specify path on chaincode spec')
-        go_path = os.environ['GOPATH']
-        proj_path = os.path.join(go_path, 'src', cc_spec.path)
 
-        if not os.listdir(proj_path):
-            raise ValueError(f'No chaincode file found at path {proj_path}')
+
+
+        # Check in GOPATH first, else use cc_spec.path as the file location
+        try:
+            go_path = os.environ.get('GOPATH', '/opt/gopath')
+            proj_path = os.path.join(go_path, 'src', cc_spec.path)
+            os.listdir(proj_path)
+        except FileNotFoundError:
+            proj_path = cc_spec.path
+
+        try:
+            os.listdir(proj_path)
+        except FileNotFoundError:
+            raise ValueError(f'No directory found at path {proj_path}')
+
+
 
         with io.BytesIO() as tar_stream:
             with tarfile.open(fileobj=tar_stream, mode='w|gz') as dist:
-                for dir_path, _, file_names in os.walk(proj_path):
+                for dir_path, _, file_names in os.walk(cc_spec.path):
                     for filename in file_names:
                         file_path = os.path.join(dir_path, filename)
 
                         with open(file_path, mode='rb') as file_obj:
-                            arcname = os.path.relpath(file_path, go_path)
+                            # Adding src to the file path ensures compatibility
+                            # with the chaincode container
+                            arcname = os.path.join('src', file_path)
                             tarinfo = dist.gettarinfo(file_path, arcname)
                             # standardizes the tar metadata so that is
                             # consistent across all files - this allows

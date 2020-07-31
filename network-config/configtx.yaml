@@ -7,18 +7,61 @@
 # configuration artifacts for the Hyperledger Fabric blockchain channel,
 # including the genesis block, certificates, and channel creation transactions.
 
+
+################################################################################
+#
+#   SECTION: Capabilities
+#
+#   - This section defines the capabilities of fabric network. This is a new
+#   concept as of v1.1.0 and should not be utilized in mixed networks with
+#   v1.0.x peers and orderers.  Capabilities define features which must be
+#   present in a fabric binary for that binary to safely participate in the
+#   fabric network.  For instance, if a new MSP type is added, newer binaries
+#   might recognize and validate the signatures from this type, while older
+#   binaries without this support would be unable to validate those
+#   transactions.  This could lead to different versions of the fabric binaries
+#   having different world states.  Instead, defining a capability for a channel
+#   informs those binaries without this capability that they must cease
+#   processing transactions until they have been upgraded.  For v1.0.x if any
+#   capabilities are defined (including a map with all capabilities turned off)
+#   then the v1.0.x peer will deliberately crash.
+#
+################################################################################
+Capabilities:
+  # Channel capabilities apply to both the orderers and the peers and must be
+  # supported by both.  Set the value of the capability to true to require it.
+  Global: &ChannelCapabilities
+    V1_3: true
+
+  # Orderer capabilities apply only to the orderers, and may be safely
+  # manipulated without concern for upgrading peers.  Set the value of the
+  # capability to true to require it.
+  Orderer: &OrdererCapabilities
+    V1_1: true
+
+  # Application capabilities apply only to the peer network, and may be safely
+  # manipulated without concern for upgrading orderers.  Set the value of the
+  # capability to true to require it.
+  Application: &ApplicationCapabilities
+    V1_3: true
+
+
+################################################################################
+#
+#   Section: Organizations
+#
+#   - This section defines the different organizational identities which will
+#   be referenced later in the configuration.
+#
+################################################################################
 Organizations:
 
   - &OrdererOrg
     Name: OrdererOrg
-
-    # ID to load the MSP definition as
     ID: OrdererOrgMSP
-
-    # MSPDir is the filesystem path which contains the MSP configuration
     MSPDir:
       /network-config/crypto/ordererOrganizations/ordererorg.com/msp
-
+    AdminPrincipal: Role.ADMIN
     Policies: &OrdererOrgPolicies
       Readers:
         Type: Signature
@@ -29,18 +72,16 @@ Organizations:
       Admins:
         Type: Signature
         Rule: "OR('OrdererOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('OrdererOrgMSP.member')"
 
   - &Org1
-    # DefaultOrg defines the organization which is used in the sampleconfig
-    # of the fabric.git development environment
     Name: Org1
-
-    # ID to load the MSP definition as
     ID: Org1MSP
-
     MSPDir: /network-config/crypto/peerOrganizations/org1.com/msp
-
-    Policies: &Org1Policies
+    AdminPrincipal: Role.ADMIN
+    Policies:
       Readers:
         Type: Signature
         Rule: "OR('Org1MSP.member')"
@@ -50,22 +91,18 @@ Organizations:
       Admins:
         Type: Signature
         Rule: "OR('Org1MSP.admin')"
-
+      Endorsement:
+        Type: Signature
+        Rule: "OR('OrdererOrgMSP.member')"
     AnchorPeers:
-      - Host: org1-peer
+      - Host: peer.org1.com
         Port: 7051
 
   - &Org2
-    # DefaultOrg defines the organization which is used in the sampleconfig
-    # of the fabric.git development environment
     Name: Org2
-
-    # ID to load the MSP definition as
     ID: Org2MSP
-
     MSPDir: /network-config/crypto/peerOrganizations/org2.com/msp
-
-    Policies: &Org1Policies
+    Policies:
       Readers:
         Type: Signature
         Rule: "OR('Org2MSP.member')"
@@ -75,11 +112,12 @@ Organizations:
       Admins:
         Type: Signature
         Rule: "OR('Org2MSP.admin')"
-
+      Endorsement:
+        Type: Signature
+        Rule: "OR('OrdererOrgMSP.member')"
     AnchorPeers:
-      - Host: org2-peer
+      - Host: peer.org2.com
         Port: 7051
-
 
 Orderer: &Orderer
   OrdererType: solo
@@ -92,22 +130,136 @@ Orderer: &Orderer
     MaxMessageCount: 10
     AbsoluteMaxBytes: 99 MB
     PreferredMaxBytes: 512 KB
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: ANY Readers
+    Writers:
+      Type: ImplicitMeta
+      Rule: ANY Writers
+    Admins:
+      Type: ImplicitMeta
+      Rule: MAJORITY Admins
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: ANY Writers
+  Capabilities:
+    <<: *OrdererCapabilities
 
+
+################################################################################
+#
+#   CHANNEL
+#
+#   This section defines the values to encode into a config transaction or
+#   genesis block for channel related parameters.
+#
+################################################################################
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: ANY Readers
+    # Who may invoke the 'Broadcast' API
+    Writers:
+      Type: ImplicitMeta
+      Rule: ANY Writers
+    # By default, who may modify elements at this config level
+    Admins:
+      Type: ImplicitMeta
+      Rule: MAJORITY Admins
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Application: &ApplicationDefaults
+  ACLs: &ACLsDefault
+    _lifecycle/CommitChaincodeDefinition: /Channel/Application/Writers
+    _lifecycle/QueryChaincodeDefinition: /Channel/Application/Readers
+    _lifecycle/QueryNamespaceDefinitions: /Channel/Application/Readers
+
+    # Lifecycle System Chaincode (lscc) function to policy mapping for access
+    # control
+    lscc/ChaincodeExists: /Channel/Application/Readers
+    lscc/GetDeploymentSpec: /Channel/Application/Readers
+    lscc/GetChaincodeData: /Channel/Application/Readers
+    lscc/GetInstantiatedChaincodes: /Channel/Application/Readers
+
+    # Query System Chaincode (qscc) function to policy mapping for access
+    # control
+    qscc/GetChainInfo: /Channel/Application/Readers
+    qscc/GetBlockByNumber: /Channel/Application/Readers
+    qscc/GetBlockByHash: /Channel/Application/Readers
+    qscc/GetTransactionByID: /Channel/Application/Readers
+    qscc/GetBlockByTxID: /Channel/Application/Readers
+
+    # Configuration System Chaincode (cscc) function to policy mapping for
+    # access control
+    cscc/GetConfigBlock: /Channel/Application/Readers
+    cscc/GetConfigTree: /Channel/Application/Readers
+    cscc/SimulateConfigTreeUpdate: /Channel/Application/Readers
+
+    # Miscellanesous peer function to policy mapping for access control
+    peer/Propose: /Channel/Application/Writers
+    peer/ChaincodeToChaincode: /Channel/Application/Readers
+
+    # Events resource to policy mapping for access control
+    event/Block: /Channel/Application/Readers
+    event/FilteredBlock: /Channel/Application/Readers
+
+  Organizations:
+  Policies: &ApplicationDefaultPolicies
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "ANY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "ANY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+################################################################################
+#
+#   Profiles
+#
+#   - Different configuration profiles may be encoded here to be specified
+#   as parameters to the configtxgen tool. The profiles which specify consortiums
+#   are to be used for generating the orderer genesis block.  With the correct
+#   consortium members defined in the orderer genesis block, channel creation
+#   requests may be generated with only the org member names and a consortium name
+#
+################################################################################
 
 Profiles:
   # The network profile is used to generate the genesis block for the network
   NetworkProfile:
     Orderer:
       <<: *Orderer
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *Org1
+        - *Org2
     Consortiums:
       BCNetworkConsortium:
         Organizations:
-          - <<: *Org1
-          - <<: *Org2
+          - *Org1
+          - *Org2
+
   # This profile is used to create a simple channel for BCNetwork
   BCNetworkChannel:
+    <<: *ChannelDefaults
     Consortium: BCNetworkConsortium
     Application:
+      <<: *ApplicationDefaults
       Organizations:
-        - <<: *Org1
-        - <<: *Org2
+        - *Org1
+        - *Org2

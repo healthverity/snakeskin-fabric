@@ -260,7 +260,7 @@ def build_endorsement_policy(policy: EndorsementPolicy,
     rmap = role_map or policy.role_map
 
     if policy.expr == PolicyExpression.And:
-        n_out_of = len(rmap)
+        n_out_of = len(policy.roles) + len(policy.sub_policies)
 
     elif policy.expr == PolicyExpression.Or:
         n_out_of = 1
@@ -303,7 +303,7 @@ def build_signature_policy_envelope(endorsement_policy: EndorsementPolicy
             MSPPrincipal(
                 principal_classification=MSPPrincipal.ROLE,
                 principal=MSPRole(
-                    role=MSPRole.MSPRoleType(role.role),
+                    role=MSPRole.MSPRoleType.Value(role.role.upper()),
                     msp_identifier=role.msp,
                 ).SerializeToString(),
             )
